@@ -82,14 +82,14 @@ def post():
             st.session_state.tickers=""
         else:
             # Handle error
-            print(response)
-            st.error(f"Error: Something went wrong. Please try again. {response.status_code}")
+            st.error(f"Error: Something went wrong. Please try again.")
   
 # app
 st.title("Sectors News")
 
 news = st.form('news')
 
+news.subheader("Create News")
 news.caption(":red[*] _required_")
 title = news.text_input("Title", placeholder="Enter title", key="title")
 body = news.text_area("Body", placeholder="Enter body", key="body")
@@ -100,5 +100,3 @@ subsector = news.selectbox("Subsector:red[*]", options = available_subsectors, f
 tags = news.text_area("Tags:red[*]", placeholder="Enter tags seperated by commas, e.g. idx, market-cap", key="tags")
 tickers = news.text_area("Tickers:red[*]", placeholder="Enter tickers seperated by commas, e.g. BBCA.JK, BBRI.JK", key="tickers")
 submit = news.form_submit_button("Submit", on_click=post)
-
-
