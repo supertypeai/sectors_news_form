@@ -41,31 +41,50 @@ available_subsectors = [
   "utilities"
 ]
 
-
 # helper functions
 def format_option(option):
     return option.replace("-", " ").title()
 
 def post():
-    if not st.session_state.source or not st.session_state.subsector or not st.session_state.file:
+    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.shareholder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.category or not st.session_state.control_status or not st.session_state.holding_before or not st.session_state.holding_after or not st.session_state.purpose:
         st.toast("Please fill out the required fields.")
     else:
-        files = {
-            'file': (st.session_state.file.name, st.session_state.file, 'application/pdf'),
-            'source': (None, st.session_state.source, 'text/plain'),
-            'sub_sector': (None, st.session_state.subsector, 'text/plain')
+        data = {
+            "document_number": st.session_state.doc_number,
+            "company_name": st.session_state.company_name,
+            "shareholder_name": st.session_state.shareholder_name,
+            "source": st.session_state.source,
+            "ticker": st.session_state.ticker,
+            "category": st.session_state.category,
+            "control_status": st.session_state.control_status,
+            "holding_before": st.session_state.holding_before, 
+            "holding_after": st.session_state.holding_after,
+            "sub_sector": st.session_state.subsector,
+            "purpose": st.session_state.purpose,
+            "date_time": dt.combine(st.session_state.date, st.session_state.time).strftime("%Y-%m-%d %H:%M:%S")
         }
 
         headers = {
             "Authorization": f"Bearer {api_key}"
         }
 
-        response = requests.post("https://sectors-news-endpoint.vercel.app/pdf", headers = headers, files=files)
+        response = requests.post("https://sectors-news-endpoint.vercel.app/insider-trading", headers = headers, json=data)
 
         if response.status_code == 200:
-            st.toast("Insider trading submitted successfully! 🎉")
-            st.session_state.source=""
-            st.session_state.subsector=available_subsectors[0]
+            st.toast("Insider Trading submitted successfully! 🎉")
+            st.session_state.doc_number = ""
+            st.session_state.company_name = ""
+            st.session_state.shareholder_name = ""
+            st.session_state.source = ""
+            st.session_state.ticker = ""
+            st.session_state.category = ""
+            st.session_state.control_status = ""
+            st.session_state.holding_before = ""
+            st.session_state.holding_after = ""
+            st.session_state.subsector = available_subsectors[0]
+            st.session_state.purpose = ""
+            st.session_state.date = dt.today()
+            st.session_state.time = dt.now()
         else:
             # Handle error
             st.error(f"Error: Something went wrong. Please try again.")
@@ -75,10 +94,19 @@ st.title("Sectors News")
 
 insider = st.form('insider')
 
-insider.subheader("Post Insider Trading")
+insider.subheader("Add Insider Trading (Non-IDX Format)")
 insider.caption(":red[*] _required_")
-
-file = insider.file_uploader("Upload File (.pdf):red[*]", type="pdf", accept_multiple_files=False, key="file")
 source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="source")
+date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), format="YYYY-MM-DD", key="date")
+time = insider.time_input("Created Time (GMT+7)*:red[*]", key="time", step=60)
+doc_number = insider.text_input("Document Number:red[*]", placeholder="Enter document number", key="doc_number")
+company_name = insider.text_input("Company Name:red[*]", placeholder="Enter company name", key="company_name")
+shareholder_name = insider.text_input("Shareholder Name:red[*]", placeholder="Enter shareholder name", key="shareholder_name")
 subsector = insider.selectbox("Subsector:red[*]", options = available_subsectors, format_func=format_option, key="subsector")
+ticker = insider.text_input("Ticker:red[*]", placeholder="Enter ticker", key="ticker")
+category = insider.text_input("Category:red[*]", placeholder="Enter category", key="category")
+control_status = insider.text_input("Control Status:red[*]", placeholder="Enter control status", key="control_status")
+holding_before = insider.text_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="holding_before")
+holding_after = insider.text_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="holding_after")
+purpose = insider.text_input("Transaction Purpose:red[*]", placeholder="Enter transaction purpose", key="purpose")
 submit = insider.form_submit_button("Submit", on_click=post)

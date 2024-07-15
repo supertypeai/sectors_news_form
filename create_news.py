@@ -89,7 +89,7 @@ st.title("Sectors News")
 
 news = st.form('news')
 
-news.subheader("Post News")
+news.subheader("Add News")
 news.caption(":red[*] _required_")
 title = news.text_input("Title", placeholder="Enter title", key="title")
 body = news.text_area("Body", placeholder="Enter body", key="body")

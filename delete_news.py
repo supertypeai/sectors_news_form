@@ -25,9 +25,9 @@ def delete():
         "Authorization": f"Bearer {api_key}"
     }
 
-    selected_ids = [i['id'] for i in data if st.session_state.get(f"checkbox_{i['id']}")]
+    # selected_ids = [i['id'] for i in data if st.session_state.get(f"checkbox_{i['id']}")]
     deleted = {
-        "id_list": selected_ids
+        "id_list": st.session_state.ids
     }
     response = requests.delete(f"https://sectors-news-endpoint.vercel.app/articles", headers = headers, json=deleted)
 
@@ -40,8 +40,8 @@ def delete():
 
 @st.experimental_dialog("Delete News")
 def dialog():
-    selected_ids = [i['id'] for i in data if st.session_state.get(f"checkbox_{i['id']}")]
-    st.write(f"Are you sure you want to delete news with the following id(s): {selected_ids}?")
+    # selected_ids = [i['id'] for i in data if st.session_state.get(f"checkbox_{i['id']}")]
+    st.write(f"Are you sure you want to delete news with the following id(s): {st.session_state.ids}?")
     if st.button("Yes", type="primary"):
         delete()
 
@@ -51,23 +51,21 @@ st.title("Sectors News")
 st.subheader("Edit News")
 
 if (len(data) > 0):
-    col1, col2 = st.columns([0.2, 0.8])
-    with col1:
-        form = col1.form("edit")
-        form.caption("Select id")
-        for i in data:
-            form.checkbox(f"{i['id']}", key=f"checkbox_{i['id']}")
-        if form.form_submit_button("Delete", type="primary"):
-            selected_ids = [i['id'] for i in data if st.session_state.get(f"checkbox_{i['id']}")]
-            if len(selected_ids) > 0:
-                dialog()
-            else:
-                st.toast("Please select at least 1 id.")
-    with col2:
-        st.dataframe(data, 
-            column_order=["id", "title", "body", "source", "timestamp", "sector", "subsector", "tags", "tickers"],
-            selection_mode="single-row"
-        )
+    form = st.form("edit")
+    selected_ids = form.multiselect("Select id(s)", [i['id'] for i in data], key="ids")
+    # for i in data:
+    #     form.checkbox(f"{i['id']}", key=f"checkbox_{i['id']}")
+    if form.form_submit_button("Delete", type="primary"):
+        # selected_ids = [i['id'] for i in data if st.session_state.get(f"checkbox_{i['id']}")]
+        if len(selected_ids) > 0:
+            dialog()
+        else:
+            st.toast("Please select at least 1 id.")
+
+    st.dataframe(data, 
+        column_order=["id", "title", "body", "source", "timestamp", "sector", "subsector", "tags", "tickers"],
+        selection_mode="single-row"
+    )
 else: 
     st.info("There is no news in the database.")
     st.page_link("create_news.py", label="Create News", icon=":material/arrow_back:")
