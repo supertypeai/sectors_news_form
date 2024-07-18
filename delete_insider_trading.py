@@ -11,13 +11,13 @@ def fetch():
         "Authorization": f"Bearer {api_key}"
     }
 
-    response = requests.get("https://sectors-news-endpoint.vercel.app/articles", headers = headers)
+    response = requests.get("https://sectors-news-endpoint.vercel.app/insider-trading", headers = headers)
 
     if response.status_code == 200:
         return response.json()
     else:
         # Handle error
-        st.error(f"Error fetching news data. Please reload the app.")
+        st.error(f"Error fetching insider trading data. Please reload the app.")
 data = fetch()
 
 def delete():
@@ -28,25 +28,25 @@ def delete():
     deleted = {
         "id_list": st.session_state.ids
     }
-    response = requests.delete(f"https://sectors-news-endpoint.vercel.app/articles", headers = headers, json=deleted)
+    response = requests.delete(f"https://sectors-news-endpoint.vercel.app/insider-trading", headers = headers, json=deleted)
 
     if response.status_code != 200:
         # Handle error
-        st.error(f"Error deleting news data. Please try again.")
+        st.error(f"Error deleting insider trading data. Please try again.")
     else:
-        st.toast("Selected news are successfully deleted!")
+        st.toast("Selected insider trading are successfully deleted!")
     st.rerun()
 
-@st.experimental_dialog("Delete News")
+@st.experimental_dialog("Delete Insider Trading")
 def dialog():
-    st.write(f"Are you sure you want to delete news with the following id(s): {st.session_state.ids}?")
+    st.write(f"Are you sure you want to delete insider trading with the following id(s): {st.session_state.ids}?")
     if st.button("Yes", type="primary"):
         delete()
 
 # app
 st.title("Sectors News")
 
-st.subheader("Delete News")
+st.subheader("Delete Insider Trading")
 
 if (len(data) > 0):
     form = st.form("edit")
@@ -58,9 +58,9 @@ if (len(data) > 0):
             st.toast("Please select at least 1 id.")
 
     st.dataframe(data, 
-        column_order=["id", "title", "body", "source", "timestamp", "sector", "subsector", "tags", "tickers"],
+        column_order=["id", "title", "body", "source", "timestamp", "sector", "subsector", "tags", "tickers", "transaction_type", "holding_before", "holding_after", "amount_transaction", "holder_type"],
         selection_mode="single-row"
     )
 else: 
-    st.info("There is no news in the database.")
-    st.page_link("create_news.py", label="Create News", icon=":material/arrow_back:")
+    st.info("There is no insider trading in the database.")
+    st.page_link("create_news.py", label="Create Insider Trading", icon=":material/arrow_back:")

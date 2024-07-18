@@ -53,7 +53,8 @@ def post():
         files = {
             'file': (st.session_state.file.name, st.session_state.file, 'application/pdf'),
             'source': (None, st.session_state.source, 'text/plain'),
-            'sub_sector': (None, st.session_state.subsector, 'text/plain')
+            'sub_sector': (None, st.session_state.subsector, 'text/plain'),
+            'holder_type': (None, st.session_state.holder_type, 'text/plain')
         }
 
         headers = {
@@ -66,6 +67,7 @@ def post():
             st.toast("Insider trading submitted successfully! 🎉")
             st.session_state.source=""
             st.session_state.subsector=available_subsectors[0]
+            st.session_state.holder_type="insider"
         else:
             # Handle error
             st.error(f"Error: Something went wrong. Please try again.")
@@ -81,4 +83,5 @@ insider.caption(":red[*] _required_")
 file = insider.file_uploader("Upload File (.pdf):red[*]", type="pdf", accept_multiple_files=False, key="file")
 source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="source")
 subsector = insider.selectbox("Subsector:red[*]", options = available_subsectors, format_func=format_option, key="subsector")
+holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="holder_type")
 submit = insider.form_submit_button("Submit", on_click=post)

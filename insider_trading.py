@@ -46,7 +46,7 @@ def format_option(option):
     return option.replace("-", " ").title()
 
 def post():
-    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.shareholder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.category or not st.session_state.control_status or not st.session_state.holding_before or not st.session_state.holding_after or not st.session_state.purpose:
+    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.shareholder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.category or not st.session_state.control_status or not st.session_state.holding_before or not st.session_state.holding_after or not st.session_state.purpose or not st.session_state.holder_type:
         st.toast("Please fill out the required fields.")
     else:
         data = {
@@ -61,6 +61,7 @@ def post():
             "holding_after": st.session_state.holding_after,
             "sub_sector": st.session_state.subsector,
             "purpose": st.session_state.purpose,
+            "holder_type": st.session_state.holder_type,
             "date_time": dt.combine(st.session_state.date, st.session_state.time).strftime("%Y-%m-%d %H:%M:%S")
         }
 
@@ -79,10 +80,11 @@ def post():
             st.session_state.ticker = ""
             st.session_state.category = ""
             st.session_state.control_status = ""
-            st.session_state.holding_before = ""
-            st.session_state.holding_after = ""
+            st.session_state.holding_before = 0
+            st.session_state.holding_after = 0
             st.session_state.subsector = available_subsectors[0]
             st.session_state.purpose = ""
+            st.session_state.holder_type="insider"
             st.session_state.date = dt.today()
             st.session_state.time = dt.now()
         else:
@@ -106,7 +108,8 @@ subsector = insider.selectbox("Subsector:red[*]", options = available_subsectors
 ticker = insider.text_input("Ticker:red[*]", placeholder="Enter ticker", key="ticker")
 category = insider.text_input("Category:red[*]", placeholder="Enter category", key="category")
 control_status = insider.text_input("Control Status:red[*]", placeholder="Enter control status", key="control_status")
-holding_before = insider.text_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="holding_before")
-holding_after = insider.text_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="holding_after")
+holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="holding_before", min_value=0)
+holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="holding_after", min_value=0)
 purpose = insider.text_input("Transaction Purpose:red[*]", placeholder="Enter transaction purpose", key="purpose")
+holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="holder_type")
 submit = insider.form_submit_button("Submit", on_click=post)
