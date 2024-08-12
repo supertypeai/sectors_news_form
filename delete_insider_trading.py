@@ -50,14 +50,14 @@ st.subheader("Delete Insider Trading")
 
 if (len(data) > 0):
     form = st.form("edit")
-    selected_ids = form.multiselect("Select id(s)", [i['id'] for i in data], key="ids")
+    selected_ids = form.multiselect("Select id(s)", [i['id'] for i in sorted(data, key=lambda x: x["id"])], key="ids")
     if form.form_submit_button("Delete", type="primary"):
         if len(selected_ids) > 0:
             dialog()
         else:
             st.toast("Please select at least 1 id.")
 
-    st.dataframe(data, 
+    st.dataframe(sorted(data, key=lambda x: x["id"], reverse=True), 
         column_order=["id", "title", "body", "source", "timestamp", "sector", "subsector", "tags", "tickers", "transaction_type", "holding_before", "holding_after", "amount_transaction", "holder_type"],
         selection_mode="single-row"
     )
