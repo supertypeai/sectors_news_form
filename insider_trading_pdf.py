@@ -61,7 +61,7 @@ def post():
             "Authorization": f"Bearer {api_key}"
         }
 
-        response = requests.post("https://sectors-news-endpoint.vercel.app/pdf", headers = headers, files=files)
+        response = requests.post("https://sectors-news-endpoint.fly.dev/pdf", headers = headers, files=files)
 
         if response.status_code == 200:
             st.toast("Insider trading submitted successfully! 🎉")

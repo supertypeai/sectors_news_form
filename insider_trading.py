@@ -69,7 +69,7 @@ def post():
             "Authorization": f"Bearer {api_key}"
         }
 
-        response = requests.post("https://sectors-news-endpoint.vercel.app/insider-trading", headers = headers, json=data)
+        response = requests.post("https://sectors-news-endpoint.fly.dev/insider-trading", headers = headers, json=data)
 
         if response.status_code == 200:
             st.toast("Insider Trading submitted successfully! 🎉")

@@ -11,7 +11,7 @@ def fetch():
         "Authorization": f"Bearer {api_key}"
     }
 
-    response = requests.get("https://sectors-news-endpoint.vercel.app/articles", headers = headers)
+    response = requests.get("https://sectors-news-endpoint.fly.dev/articles", headers = headers)
 
     if response.status_code == 200:
         return response.json()
@@ -28,7 +28,7 @@ def delete():
     deleted = {
         "id_list": st.session_state.ids
     }
-    response = requests.delete(f"https://sectors-news-endpoint.vercel.app/articles", headers = headers, json=deleted)
+    response = requests.delete(f"https://sectors-news-endpoint.fly.dev/articles", headers = headers, json=deleted)
 
     if response.status_code != 200:
         # Handle error
