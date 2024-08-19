@@ -101,7 +101,7 @@ def post():
             data["id"] = st.session_state.edit
             response = requests.patch("https://sectors-news-endpoint.fly.dev/articles", headers = headers, json=data)
         else:
-            response = requests.post("https://sectors-news-endpoint.fly.dev/articles", headers = headers, json=data)
+            response = requests.post("https://sectors-news-endpoint.fly.dev/url-article/post", headers = headers, json=data)
 
         if response.status_code == 200:
             st.toast("News submitted successfully! 🎉")
