@@ -151,7 +151,7 @@ st.title("Sectors News")
 if st.session_state.pdf_view == "file":
     insider = st.form('insider')
 
-    insider.subheader("Add Insider Trading")
+    insider.subheader("Add Insider Trading (IDX Format)")
     insider.caption(":red[*] _required_")
 
     file = insider.file_uploader("Upload File (.pdf):red[*]", type="pdf", accept_multiple_files=False, key="file")
@@ -163,7 +163,7 @@ if st.session_state.pdf_view == "file":
 elif st.session_state.pdf_view == "post":
     insider = st.form('insider')
 
-    insider.subheader("Add Insider Trading")
+    insider.subheader("Add Insider Trading (IDX Format)")
     back_button = insider.form_submit_button("< Back", on_click=back)
     insider.caption(":red[*] _required_")
     source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="pdf_source")
