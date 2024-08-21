@@ -79,7 +79,7 @@ def generate():
             st.session_state.pdf_holding_after=autogen["holding_after"]
             st.session_state.pdf_subsector=autogen["sub_sector"]
             st.session_state.pdf_tags=', '.join(autogen["tags"])
-            st.session_state.pdf_tickers=', '.join(autogen["tags"])
+            st.session_state.pdf_tickers=', '.join(autogen["tickers"])
             st.session_state.pdf_view = "post"
         else:
             # Handle error
