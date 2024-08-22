@@ -47,14 +47,12 @@ def format_option(option):
     return option.replace("-", " ").title()
 
 def generate():
-    if not st.session_state.pdf_source or not st.session_state.pdf_subsector or not st.session_state.file:
+    if not st.session_state.pdf_source or not st.session_state.file:
         st.toast("Please fill out the required fields.")
     else:
         files = {
             'file': (st.session_state.file.name, st.session_state.file, 'application/pdf'),
             'source': (None, st.session_state.pdf_source, 'text/plain'),
-            'sub_sector': (None, st.session_state.pdf_subsector, 'text/plain'),
-            'holder_type': (None, st.session_state.pdf_holder_type, 'text/plain')
         }
 
         headers = {
@@ -72,12 +70,10 @@ def generate():
             st.session_state.pdf_date=timestamp.date()
             st.session_state.pdf_time=timestamp.time()
             st.session_state.pdf_holder_name=autogen["holder_name"]
-            st.session_state.pdf_holder_type=autogen["holder_type"]
             st.session_state.pdf_holding_before=autogen["holding_before"]
             st.session_state.pdf_amount=autogen["amount_transaction"]
             st.session_state.pdf_transaction_type=autogen["transaction_type"]
             st.session_state.pdf_holding_after=autogen["holding_after"]
-            st.session_state.pdf_subsector=autogen["sub_sector"]
             st.session_state.pdf_tags=', '.join(autogen["tags"])
             st.session_state.pdf_tickers=', '.join(autogen["tickers"])
             st.session_state.pdf_view = "post"
@@ -156,8 +152,6 @@ if st.session_state.pdf_view == "file":
 
     file = insider.file_uploader("Upload File (.pdf):red[*]", type="pdf", accept_multiple_files=False, key="file")
     source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="pdf_source")
-    subsector = insider.selectbox("Subsector:red[*]", options = available_subsectors, format_func=format_option, key="pdf_subsector")
-    holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="pdf_holder_type")
     submit = insider.form_submit_button("Submit", on_click=generate)
 
 elif st.session_state.pdf_view == "post":
