@@ -46,13 +46,13 @@ def format_option(option):
     return option.replace("-", " ").title()
 
 def post():
-    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.shareholder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.category or not st.session_state.control_status or not st.session_state.holding_before or not st.session_state.holding_after or not st.session_state.purpose or not st.session_state.holder_type:
+    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.category or not st.session_state.control_status or not st.session_state.holding_before or not st.session_state.holding_after or not st.session_state.purpose or not st.session_state.holder_type:
         st.toast("Please fill out the required fields.")
     else:
         data = {
             "document_number": st.session_state.doc_number,
             "company_name": st.session_state.company_name,
-            "shareholder_name": st.session_state.shareholder_name,
+            "holder_name": st.session_state.holder_name,
             "source": st.session_state.source,
             "ticker": st.session_state.ticker,
             "category": st.session_state.category,
@@ -75,7 +75,7 @@ def post():
             st.toast("Insider Trading submitted successfully! 🎉")
             st.session_state.doc_number = ""
             st.session_state.company_name = ""
-            st.session_state.shareholder_name = ""
+            st.session_state.holder_name = ""
             st.session_state.source = ""
             st.session_state.ticker = ""
             st.session_state.category = ""
@@ -103,7 +103,7 @@ date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), f
 time = insider.time_input("Created Time (GMT+7)*:red[*]", key="time", step=60)
 doc_number = insider.text_input("Document Number:red[*]", placeholder="Enter document number", key="doc_number")
 company_name = insider.text_input("Company Name:red[*]", placeholder="Enter company name", key="company_name")
-shareholder_name = insider.text_input("Shareholder Name:red[*]", placeholder="Enter shareholder name", key="shareholder_name")
+holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder name", key="holder_name")
 subsector = insider.selectbox("Subsector:red[*]", options = available_subsectors, format_func=format_option, key="subsector")
 ticker = insider.text_input("Ticker:red[*]", placeholder="Enter ticker", key="ticker")
 category = insider.text_input("Category:red[*]", placeholder="Enter category", key="category")

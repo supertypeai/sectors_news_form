@@ -58,7 +58,7 @@ if (len(data) > 0):
             st.toast("Please select at least 1 id.")
 
     st.dataframe(sorted(data, key=lambda x: x["id"], reverse=True), 
-        column_order=["id", "title", "body", "source", "timestamp", "sector", "subsector", "tags", "tickers", "transaction_type", "holding_before", "holding_after", "amount_transaction", "holder_type"],
+        column_order=["id", "title", "body", "source", "timestamp", "holder_name", "holder_type", "holding_before", "amount_transaction", "transaction_type", "holding_after", "sector", "sub_sector", "tags", "tickers"],
         selection_mode="single-row"
     )
 else: 
