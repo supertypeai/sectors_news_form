@@ -134,7 +134,6 @@ def post():
             st.session_state.pdf_edit_tickers=""
             st.session_state.pdf_edit_view = "view1"
         else:
-            print(response.json())
             # Handle error
             st.error(f"Error: Something went wrong. Please try again.")
 
