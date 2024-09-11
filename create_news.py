@@ -77,12 +77,12 @@ def generate():
             st.error(f"Error: Something went wrong. Please try again.")
 
 def post():
-    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.subsector or not st.session_state.tags or not st.session_state.tickers:
+    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.subsector or not st.session_state.tags:
         st.toast("Please fill out the required fields.")
     else:
         # process form data
-        tags_list = [tag.strip() for tag in st.session_state.tags.split(',') if tag.strip()]
-        tickers_list = [ticker.strip() for ticker in st.session_state.tickers.split(',') if ticker.strip()]
+        tags_list = [tag.strip() for tag in st.session_state.tags.split(',') if tag.strip()] 
+        tickers_list = [ticker.strip() for ticker in st.session_state.tickers.split(',') if ticker.strip()] if st.session_state.tickers else []
 
         data = {
             "title": st.session_state.title,
@@ -178,6 +178,6 @@ elif st.session_state.view == "post":
     time = news.time_input("Created Time (GMT+7)*:red[*]", key="time", step=60)
     subsector = news.multiselect("Subsector:red[*]", options = available_subsectors, format_func=format_option, key="subsector")
     tags = news.text_area("Tags:red[*]", placeholder="Enter tags seperated by commas, e.g. idx, market-cap", key="tags")
-    tickers = news.text_area("Tickers:red[*]", placeholder="Enter tickers seperated by commas, e.g. BBCA.JK, BBRI.JK", key="tickers")
+    tickers = news.text_area("Tickers", placeholder="Enter tickers seperated by commas, e.g. BBCA.JK, BBRI.JK", key="tickers")
     dimension = news.text_area("Dimension:red[*]", placeholder="Enter dimension", key="dimension")
     submit2 = news.form_submit_button("Submit", on_click=post)

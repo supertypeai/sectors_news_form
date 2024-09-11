@@ -79,13 +79,13 @@ def edit():
         st.toast("Please select 1 id.")
 
 def post():
-    if not st.session_state.edit_source or not st.session_state.edit_date or not st.session_state.edit_time or not st.session_state.edit_subsector or not st.session_state.edit_tags or not st.session_state.edit_tickers:
+    if not st.session_state.edit_source or not st.session_state.edit_date or not st.session_state.edit_time or not st.session_state.edit_subsector or not st.session_state.edit_tags:
         st.toast("Please fill out the required fields.")
     else:
         # process form data
         selected_id = st.session_state.edit_id
         tags_list = [tag.strip() for tag in st.session_state.edit_tags.split(',') if tag.strip()]
-        tickers_list = [ticker.strip() for ticker in st.session_state.edit_tickers.split(',') if ticker.strip()]
+        tickers_list = [ticker.strip() for ticker in st.session_state.edit_tickers.split(',') if ticker.strip()] if st.session_state.edit_tickers else []
 
         data = {
             "id": selected_id,
@@ -160,6 +160,6 @@ elif st.session_state.view_edit == "view2":
     time = edit_news.time_input("Created Time (GMT+7)*:red[*]", value=st.session_state.get("edit_time", dt.now().time()), key="edit_time", step=60)
     subsector = edit_news.multiselect("Subsector:red[*]", options=available_subsectors, default=[option for option in st.session_state.get("edit_subsector", [available_subsectors[0]]) if option in available_subsectors], format_func=format_option, key="edit_subsector")
     tags = edit_news.text_area("Tags:red[*]", value=st.session_state.get("edit_tags", ""), placeholder="Enter tags separated by commas, e.g. idx, market-cap", key="edit_tags")
-    tickers = edit_news.text_area("Tickers:red[*]", value=st.session_state.get("edit_tickers", ""), placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="edit_tickers")
+    tickers = edit_news.text_area("Tickers", value=st.session_state.get("edit_tickers", ""), placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="edit_tickers")
     dimension = edit_news.text_area("Dimension:red[*]", value=st.session_state.get("edit_dimension", ""), placeholder="Enter dimension", key="dimension")
     submit2 = edit_news.form_submit_button("Submit", on_click=post, type="primary")        
