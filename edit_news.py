@@ -71,7 +71,7 @@ def edit():
             st.session_state.edit_source=prev_data["source"]
             st.session_state.edit_date=dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S").date()
             st.session_state.edit_time=dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S").time()
-            st.session_state.edit_subsector=prev_data["sub_sector"]
+            st.session_state.edit_subsector=[option for option in prev_data["sub_sector"] if option in available_subsectors]
             st.session_state.edit_tags=", ".join(prev_data["tags"])
             st.session_state.edit_tickers=", ".join(prev_data["tickers"])
             st.session_state.edit_dimension = json.dumps(prev_data["dimension"])
