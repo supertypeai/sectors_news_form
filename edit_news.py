@@ -139,7 +139,7 @@ if st.session_state.view_edit == "view1":
         form.form_submit_button("Edit", type="primary", on_click=edit)
 
         st.dataframe(sorted(data, key=lambda x: x["id"], reverse=True), 
-            column_order=["id", "title", "body", "source", "timestamp", "sector", "sub_sector", "tags", "tickers", "dimension"],
+            column_order=["id", "title", "body", "source", "timestamp", "sector", "sub_sector", "tags", "tickers", "dimension", "score"],
             selection_mode="single-row"
         )
     else: 
