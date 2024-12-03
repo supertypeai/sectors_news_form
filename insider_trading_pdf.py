@@ -82,7 +82,7 @@ def generate():
             st.error(f"Error: Something went wrong. Please try again.")
   
 def post():
-    if not st.session_state.pdf_source or not st.session_state.pdf_title or not st.session_state.pdf_body or not st.session_state.pdf_date or not st.session_state.pdf_time or not st.session_state.pdf_holder_name or not st.session_state.pdf_holder_type or not st.session_state.pdf_holding_before or not st.session_state.pdf_amount or not st.session_state.pdf_transaction_type or not st.session_state.pdf_holding_after or not st.session_state.pdf_subsector or not st.session_state.pdf_tags or not st.session_state.pdf_tickers:
+    if not st.session_state.pdf_source or not st.session_state.pdf_title or not st.session_state.pdf_body or not st.session_state.pdf_date or not st.session_state.pdf_time or not st.session_state.pdf_holder_name or not st.session_state.pdf_holder_type or not st.session_state.pdf_transaction_type or not st.session_state.pdf_subsector or not st.session_state.pdf_tags or not st.session_state.pdf_tickers:
         st.toast("Please fill out the required fields.")
     else:
         tags_list = [tag.strip() for tag in st.session_state.pdf_tags.split(',') if tag.strip()]
