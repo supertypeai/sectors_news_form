@@ -86,7 +86,7 @@ def edit():
         st.toast("Please select 1 id.")
 
 def post():
-    if not st.session_state.pdf_edit_source or not st.session_state.pdf_edit_title or not st.session_state.pdf_edit_body or not st.session_state.pdf_edit_date or not st.session_state.pdf_edit_time or not st.session_state.pdf_edit_holder_name or not st.session_state.pdf_edit_holder_type or not st.session_state.pdf_edit_holding_before or not st.session_state.pdf_edit_amount or not st.session_state.pdf_edit_transaction_type or not st.session_state.pdf_edit_holding_after or not st.session_state.pdf_edit_subsector or not st.session_state.pdf_edit_tags or not st.session_state.pdf_edit_tickers:
+    if not st.session_state.pdf_edit_source or not st.session_state.pdf_edit_title or not st.session_state.pdf_edit_body or not st.session_state.pdf_edit_date or not st.session_state.pdf_edit_time or not st.session_state.pdf_edit_holder_name or not st.session_state.pdf_edit_holder_type or not st.session_state.pdf_edit_transaction_type or not st.session_state.pdf_edit_subsector or not st.session_state.pdf_edit_tags or not st.session_state.pdf_edit_tickers:
         st.toast("Please fill out the required fields.")
     else:
         tags_list = [tag.strip() for tag in st.session_state.pdf_edit_tags.split(',') if tag.strip()]

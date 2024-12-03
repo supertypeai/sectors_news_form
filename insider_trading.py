@@ -46,7 +46,7 @@ def format_option(option):
     return option.replace("-", " ").title()
 
 def post():
-    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.category or not st.session_state.control_status or not st.session_state.holding_before or not st.session_state.holding_after or not st.session_state.purpose or not st.session_state.holder_type:
+    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.category or not st.session_state.control_status or not st.session_state.purpose or not st.session_state.holder_type:
         st.toast("Please fill out the required fields.")
     else:
         data = {
