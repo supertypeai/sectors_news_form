@@ -80,7 +80,7 @@ def edit():
             st.session_state.pdf_edit_holding_after=prev_data["holding_after"]
             st.session_state.pdf_edit_subsector=prev_data["sub_sector"]
             st.session_state.pdf_edit_tags=', '.join(prev_data["tags"])
-            st.session_state.pdf_edit_tickers=', '.join(prev_data["tags"])
+            st.session_state.pdf_edit_tickers=', '.join(prev_data["tickers"])
             st.session_state.pdf_edit_view = "view2"
     else:
         st.toast("Please select 1 id.")
@@ -117,7 +117,6 @@ def post():
 
         if response.status_code == 200:
             st.toast("Insider trading editted successfully! 🎉")
-            st.session_state.pdf_edit_id=""
             st.session_state.pdf_edit_source=""
             st.session_state.pdf_edit_title=""
             st.session_state.pdf_edit_body=""
