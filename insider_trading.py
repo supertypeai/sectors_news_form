@@ -46,7 +46,7 @@ def format_option(option):
     return option.replace("-", " ").title()
 
 def post():
-    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.category or not st.session_state.control_status or not st.session_state.purpose or not st.session_state.holder_type:
+    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.purpose or not st.session_state.holder_type:
         st.toast("Please fill out the required fields.")
     else:
         data = {
@@ -55,8 +55,6 @@ def post():
             "holder_name": st.session_state.holder_name,
             "source": st.session_state.source,
             "ticker": st.session_state.ticker,
-            "category": st.session_state.category,
-            "control_status": st.session_state.control_status,
             "holding_before": st.session_state.holding_before, 
             "holding_after": st.session_state.holding_after,
             "sub_sector": st.session_state.subsector,
@@ -78,8 +76,6 @@ def post():
             st.session_state.holder_name = ""
             st.session_state.source = ""
             st.session_state.ticker = ""
-            st.session_state.category = ""
-            st.session_state.control_status = ""
             st.session_state.holding_before = 0
             st.session_state.holding_after = 0
             st.session_state.subsector = available_subsectors[0]
@@ -106,8 +102,6 @@ company_name = insider.text_input("Company Name:red[*]", placeholder="Enter comp
 holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder name", key="holder_name")
 subsector = insider.selectbox("Subsector:red[*]", options = available_subsectors, format_func=format_option, key="subsector")
 ticker = insider.text_input("Ticker:red[*]", placeholder="Enter ticker", key="ticker")
-category = insider.text_input("Category:red[*]", placeholder="Enter category", key="category")
-control_status = insider.text_input("Control Status:red[*]", placeholder="Enter control status", key="control_status")
 holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="holding_before", min_value=0)
 holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="holding_after", min_value=0)
 purpose = insider.text_input("Transaction Purpose:red[*]", placeholder="Enter transaction purpose", key="purpose")
