@@ -81,16 +81,20 @@ def edit():
             st.session_state.pdf_edit_subsector=prev_data["sub_sector"]
             st.session_state.pdf_edit_tags=', '.join(prev_data["tags"])
             st.session_state.pdf_edit_tickers=', '.join(prev_data["tickers"])
+            st.session_state.pdf_edit_price_transaction = prev_data["price_transaction"]
+            st.session_state.pdf_edit_price = prev_data["price"]
+            st.session_state.pdf_edit_trans_value = prev_data["transaction_value"]
             st.session_state.pdf_edit_view = "view2"
     else:
         st.toast("Please select 1 id.")
 
 def post():
-    if not st.session_state.pdf_edit_source or not st.session_state.pdf_edit_title or not st.session_state.pdf_edit_body or not st.session_state.pdf_edit_date or not st.session_state.pdf_edit_time or not st.session_state.pdf_edit_holder_name or not st.session_state.pdf_edit_holder_type or not st.session_state.pdf_edit_transaction_type or not st.session_state.pdf_edit_subsector or not st.session_state.pdf_edit_tags or not st.session_state.pdf_edit_tickers:
+    if not st.session_state.pdf_edit_source or not st.session_state.pdf_edit_title or not st.session_state.pdf_edit_body or not st.session_state.pdf_edit_date or not st.session_state.pdf_edit_time or not st.session_state.pdf_edit_holder_name or not st.session_state.pdf_edit_holder_type or not st.session_state.pdf_edit_transaction_type or not st.session_state.pdf_edit_subsector or not st.session_state.pdf_edit_tags or not st.session_state.pdf_edit_tickers or not st.session_state.pdf_edit_price_transaction:
         st.toast("Please fill out the required fields.")
     else:
         tags_list = [tag.strip() for tag in st.session_state.pdf_edit_tags.split(',') if tag.strip()]
         tickers_list = [ticker.strip() for ticker in st.session_state.pdf_edit_tickers.split(',') if ticker.strip()]
+        transaction = st.session_state.pdf_edit_price_transaction if len(st.session_state.pdf_edit_price_transaction["amount_transacted"]) > 0 else {"amount_transacted": [st.session_state.pdf_edit_amount], "prices": [st.session_state.pdf_edit_price]}
 
         data = {
             'id': st.session_state.pdf_edit_id,
@@ -106,7 +110,8 @@ def post():
             'holding_after': st.session_state.pdf_edit_holding_after,
             'sub_sector': st.session_state.pdf_edit_subsector,
             'tags': tags_list,
-            'tickers': tickers_list
+            'tickers': tickers_list,
+            'price_transaction': transaction
         }
 
         headers = {
@@ -132,6 +137,9 @@ def post():
             st.session_state.pdf_edit_tags=""
             st.session_state.pdf_edit_tickers=""
             st.session_state.pdf_edit_view = "view1"
+            st.session_state.pdf_edit_price_transaction = None
+            st.session_state.pdf_edit_price = ""
+            st.session_state.pdf_edit_trans_value = ""
         else:
             # Handle error
             st.error(f"Error: Something went wrong. Please try again.")
@@ -155,7 +163,7 @@ if st.session_state.pdf_edit_view == "view1":
         form.form_submit_button("Edit", type="primary", on_click=edit)
 
         st.dataframe(sorted(data, key=lambda x: x["id"], reverse=True), 
-            column_order=["id", "title", "body", "source", "timestamp", "holder_name", "holder_type", "holding_before", "amount_transaction", "transaction_type", "holding_after", "sector", "sub_sector", "tags", "tickers"],
+            column_order=["id", "title", "body", "source", "timestamp", "holder_name", "holder_type", "holding_before", "amount_transaction", "transaction_type", "holding_after", "price_transaction", "price", "transaction_value", "sector", "sub_sector", "tags", "tickers"],
             selection_mode="single-row"
         )
     else: 
@@ -183,4 +191,31 @@ elif st.session_state.pdf_edit_view == "view2":
     subsector = insider.selectbox("Subsector:red[*]", index = available_subsectors.index(st.session_state.get("subsector", available_subsectors[0])), options = available_subsectors, format_func=format_option, key="pdf_edit_subsector")
     tags = insider.text_area("Tags:red[*]", value=st.session_state.get("pdf_edit_tags", ""), placeholder="Enter tags separated by commas, e.g. idx, market-cap", key="pdf_edit_tags")
     tickers = insider.text_area("Tickers:red[*]", value=st.session_state.get("pdf_edit_tickers", ""), placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="pdf_edit_tickers")
+
+    price_transaction = st.session_state.get("pdf_edit_price_transaction", {"amount_transacted": [], "prices": []})
+    if price_transaction is None:
+        price_transaction = {"amount_transacted": [], "prices": []}
+    
+    transaction_container = insider.expander("Transactions", expanded=True)
+
+    for idx, (amount, price) in enumerate(zip(price_transaction["amount_transacted"], price_transaction["prices"])):
+        col1, col2, col3 = transaction_container.columns([2, 2, 2], vertical_alignment="bottom")
+        price_transaction["amount_transacted"][idx] = col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"amount_{idx}")
+        price_transaction["prices"][idx] = col2.number_input(f"Price {idx + 1}", value=price, key=f"price_{idx}")
+        remove_button = col3.form_submit_button(f"Remove Transaction {idx + 1}")
+        if remove_button:
+            price_transaction["amount_transacted"].pop(idx)
+            price_transaction["prices"].pop(idx)
+            st.rerun()
+
+    if transaction_container.form_submit_button("Add Transaction"):
+        price_transaction["amount_transacted"].append(0)
+        price_transaction["prices"].append(0)
+        st.rerun()
+
+    st.session_state.pdf_edit_price_transaction = price_transaction
+
+    price = insider.number_input("Price*", value= st.session_state.get("pdf_edit_price", 0), disabled=True, key="pdf_edit_price")
+    transaction_value = insider.number_input("Transaction Value*", value= st.session_state.get("pdf_edit_trans_value", 0), disabled=True, key="pdf_edit_trans_value")
+
     submit = insider.form_submit_button("Submit", on_click=post)

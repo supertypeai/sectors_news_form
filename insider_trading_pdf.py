@@ -76,18 +76,21 @@ def generate():
             st.session_state.pdf_holding_after=autogen["holding_after"]
             st.session_state.pdf_tags=', '.join(autogen["tags"])
             st.session_state.pdf_tickers=', '.join(autogen["tickers"])
+            st.session_state.pdf_price_transaction = autogen["price_transaction"]
+            st.session_state.pdf_price = autogen["price"]
+            st.session_state.pdf_trans_value = autogen["transaction_value"]
             st.session_state.pdf_view = "post"
         else:
             # Handle error
             st.error(f"Error: Something went wrong. Please try again.")
   
 def post():
-    if not st.session_state.pdf_source or not st.session_state.pdf_title or not st.session_state.pdf_body or not st.session_state.pdf_date or not st.session_state.pdf_time or not st.session_state.pdf_holder_name or not st.session_state.pdf_holder_type or not st.session_state.pdf_transaction_type or not st.session_state.pdf_subsector or not st.session_state.pdf_tags or not st.session_state.pdf_tickers:
+    if not st.session_state.pdf_source or not st.session_state.pdf_title or not st.session_state.pdf_body or not st.session_state.pdf_date or not st.session_state.pdf_time or not st.session_state.pdf_holder_name or not st.session_state.pdf_holder_type or not st.session_state.pdf_transaction_type or not st.session_state.pdf_subsector or not st.session_state.pdf_tags or not st.session_state.pdf_tickers or not st.session_state.pdf_price_transaction:
         st.toast("Please fill out the required fields.")
     else:
         tags_list = [tag.strip() for tag in st.session_state.pdf_tags.split(',') if tag.strip()]
         tickers_list = [ticker.strip() for ticker in st.session_state.pdf_tickers.split(',') if ticker.strip()]
-
+        transaction = st.session_state.pdf_price_transaction if len(st.session_state.pdf_price_transaction["amount_transacted"]) > 0 else {"amount_transacted": [st.session_state.pdf_amount], "prices": [st.session_state.pdf_price]}
         data = {
             'source': st.session_state.pdf_source,
             'title': st.session_state.pdf_title,
@@ -101,7 +104,8 @@ def post():
             'holding_after': st.session_state.pdf_holding_after,
             'sub_sector': st.session_state.pdf_subsector,
             'tags': tags_list,
-            'tickers': tickers_list
+            'tickers': tickers_list,
+            'price_transaction': transaction,
         }
 
         headers = {
@@ -127,6 +131,9 @@ def post():
             st.session_state.pdf_tags=""
             st.session_state.pdf_tickers=""
             st.session_state.pdf_view = "file"
+            st.session_state.pdf_price_transaction = None
+            st.session_state.pdf_price = ""
+            st.session_state.pdf_trans_value = ""
         else:
             # Handle error
             st.error(f"Error: Something went wrong. Please try again.")
@@ -174,4 +181,32 @@ elif st.session_state.pdf_view == "post":
     subsector = insider.selectbox("Subsector:red[*]", options = available_subsectors, format_func=format_option, key="pdf_subsector")
     tags = insider.text_area("Tags:red[*]", placeholder="Enter tags separated by commas, e.g. idx, market-cap", key="pdf_tags")
     tickers = insider.text_area("Tickers:red[*]", placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="pdf_tickers")
+
+    price_transaction = st.session_state.get("pdf_price_transaction", {"amount_transacted": [], "prices": []})
+    if price_transaction is None:
+        price_transaction = {"amount_transacted": [], "prices": []}
+    
+    transaction_container = insider.expander("Transactions", expanded=True)
+
+    for idx, (amount, price) in enumerate(zip(price_transaction["amount_transacted"], price_transaction["prices"])):
+        col1, col2, col3 = transaction_container.columns([2, 2, 2], vertical_alignment="bottom")
+        price_transaction["amount_transacted"][idx] = col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"amount_{idx}")
+        price_transaction["prices"][idx] = col2.number_input(f"Price {idx + 1}", value=price, key=f"price_{idx}")
+        remove_button = col3.form_submit_button(f"Remove Transaction {idx + 1}")
+        if remove_button:
+            price_transaction["amount_transacted"].pop(idx)
+            price_transaction["prices"].pop(idx)
+            st.rerun()
+
+    if transaction_container.form_submit_button("Add Transaction"):
+        price_transaction["amount_transacted"].append(0)
+        price_transaction["prices"].append(0)
+        st.rerun()
+
+    st.session_state.pdf_price_transaction = price_transaction
+
+    price = insider.number_input("Price*", disabled=True, key="pdf_price")
+    transaction_value = insider.number_input("Transaction Value*", disabled=True, key="pdf_trans_value")
+    
+    
     submit = insider.form_submit_button("Submit", on_click=post)
