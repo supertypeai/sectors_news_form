@@ -37,7 +37,7 @@ def delete():
         st.toast("Selected insider trading are successfully deleted!")
     st.rerun()
 
-@st.experimental_dialog("Delete Insider Trading")
+@st.dialog("Delete Insider Trading")
 def dialog():
     st.write(f"Are you sure you want to delete insider trading with the following id(s): {st.session_state.ids}?")
     if st.button("Yes", type="primary"):
