@@ -90,7 +90,11 @@ def post():
     else:
         tags_list = [tag.strip() for tag in st.session_state.pdf_tags.split(',') if tag.strip()]
         tickers_list = [ticker.strip() for ticker in st.session_state.pdf_tickers.split(',') if ticker.strip()]
-        transaction = st.session_state.pdf_price_transaction if len(st.session_state.pdf_price_transaction["amount_transacted"]) > 0 else {"amount_transacted": [st.session_state.pdf_amount], "prices": [st.session_state.pdf_price]}
+        final_t = {"amount_transacted": [], "prices": []}
+        for i in range(len(st.session_state.pdf_price_transaction["amount_transacted"])):
+            final_t["amount_transacted"].append(st.session_state[f"amount_{i}"])
+            final_t["prices"].append(st.session_state[f"price_{i}"])
+
         data = {
             'source': st.session_state.pdf_source,
             'title': st.session_state.pdf_title,
@@ -105,7 +109,7 @@ def post():
             'sub_sector': st.session_state.pdf_subsector,
             'tags': tags_list,
             'tickers': tickers_list,
-            'price_transaction': transaction,
+            'price_transaction': final_t,
         }
 
         headers = {

@@ -94,7 +94,11 @@ def post():
     else:
         tags_list = [tag.strip() for tag in st.session_state.pdf_edit_tags.split(',') if tag.strip()]
         tickers_list = [ticker.strip() for ticker in st.session_state.pdf_edit_tickers.split(',') if ticker.strip()]
-        transaction = st.session_state.pdf_edit_price_transaction if len(st.session_state.pdf_edit_price_transaction["amount_transacted"]) > 0 else {"amount_transacted": [st.session_state.pdf_edit_amount], "prices": [st.session_state.pdf_edit_price]}
+
+        final_t = {"amount_transacted": [], "prices": []}
+        for i in range(len(st.session_state.pdf_edit_price_transaction["amount_transacted"])):
+            final_t["amount_transacted"].append(st.session_state[f"amount_{i}"])
+            final_t["prices"].append(st.session_state[f"price_{i}"])
 
         data = {
             'id': st.session_state.pdf_edit_id,
@@ -111,7 +115,7 @@ def post():
             'sub_sector': st.session_state.pdf_edit_subsector,
             'tags': tags_list,
             'tickers': tickers_list,
-            'price_transaction': transaction
+            'price_transaction': final_t
         }
 
         headers = {
@@ -207,7 +211,7 @@ elif st.session_state.pdf_edit_view == "view2":
             price_transaction["amount_transacted"].pop(idx)
             price_transaction["prices"].pop(idx)
             st.rerun()
-
+    
     if transaction_container.form_submit_button("Add Transaction"):
         price_transaction["amount_transacted"].append(0)
         price_transaction["prices"].append(0)
