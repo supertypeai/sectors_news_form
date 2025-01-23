@@ -75,6 +75,7 @@ def edit():
             st.session_state.edit_tags=", ".join(prev_data["tags"])
             st.session_state.edit_tickers=", ".join(prev_data["tickers"])
             st.session_state.edit_dimension = json.dumps(prev_data["dimension"])
+            st.session_state.edit_score = prev_data["score"]
     else:
         st.toast("Please select 1 id.")
 
@@ -96,7 +97,8 @@ def post():
             "sub_sector": st.session_state.edit_subsector,
             "tags": tags_list,
             "tickers": tickers_list,
-            "dimension": json.loads(st.session_state.edit_dimension)
+            "dimension": json.loads(st.session_state.edit_dimension),
+            "score": st.session_state.edit_score
         }
 
         headers = {
@@ -116,6 +118,7 @@ def post():
             st.session_state.edit_tags=""
             st.session_state.edit_tickers=""
             st.session_state.edit_dimension=""
+            st.session_state.edit_score = ""
             st.session_state.view_edit = 'view1'
         else:
             # Handle error
