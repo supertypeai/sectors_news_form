@@ -46,13 +46,17 @@ def format_option(option):
     return option.replace("-", " ").title()
 
 def post():
-    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.purpose or not st.session_state.holder_type:
+    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.purpose or not st.session_state.holder_type or not st.session_state.price_transaction:
         st.toast("Please fill out the required fields.")
     else:
+        final_t = {"amount_transacted": [], "prices": []}
+        for i in range(len(st.session_state.price_transaction["amount_transacted"])):
+            final_t["amount_transacted"].append(st.session_state[f"amount_{i}"])
+            final_t["prices"].append(st.session_state[f"price_{i}"])
         data = {
             "document_number": st.session_state.doc_number,
             "company_name": st.session_state.company_name,
-            "holder_name": st.session_state.holder_name,
+            "shareholder_name": st.session_state.holder_name,
             "source": st.session_state.source,
             "ticker": st.session_state.ticker,
             "holding_before": st.session_state.holding_before, 
@@ -60,7 +64,8 @@ def post():
             "sub_sector": st.session_state.subsector,
             "purpose": st.session_state.purpose,
             "holder_type": st.session_state.holder_type,
-            "date_time": dt.combine(st.session_state.date, st.session_state.time).strftime("%Y-%m-%d %H:%M:%S")
+            "date_time": dt.combine(st.session_state.date, st.session_state.time).strftime("%Y-%m-%d %H:%M:%S"),
+            "price_transaction": final_t
         }
 
         headers = {
@@ -83,6 +88,7 @@ def post():
             st.session_state.holder_type="insider"
             st.session_state.date = dt.today()
             st.session_state.time = dt.now()
+            st.session_state.price_transaction = None
         else:
             # Handle error
             st.error(f"Error: Something went wrong. Please try again.")
@@ -106,4 +112,28 @@ holding_before = insider.number_input("Stock Holding before Transaction:red[*]",
 holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="holding_after", min_value=0)
 purpose = insider.text_input("Transaction Purpose:red[*]", placeholder="Enter transaction purpose", key="purpose")
 holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="holder_type")
+
+price_transaction = st.session_state.get("price_transaction", {"amount_transacted": [], "prices": []})
+if price_transaction is None:
+    price_transaction = {"amount_transacted": [], "prices": []}
+
+transaction_container = insider.expander("Transactions", expanded=True)
+
+for idx, (amount, price) in enumerate(zip(price_transaction["amount_transacted"], price_transaction["prices"])):
+    col1, col2, col3 = transaction_container.columns([2, 2, 2], vertical_alignment="bottom")
+    price_transaction["amount_transacted"][idx] = col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"amount_{idx}")
+    price_transaction["prices"][idx] = col2.number_input(f"Price {idx + 1}", value=price, key=f"price_{idx}")
+    remove_button = col3.form_submit_button(f"Remove Transaction {idx + 1}")
+    if remove_button:
+        price_transaction["amount_transacted"].pop(idx)
+        price_transaction["prices"].pop(idx)
+        st.rerun()
+
+if transaction_container.form_submit_button("Add Transaction"):
+    price_transaction["amount_transacted"].append(0)
+    price_transaction["prices"].append(0)
+    st.rerun()
+
+st.session_state.price_transaction = price_transaction
+
 submit = insider.form_submit_button("Submit", on_click=post)
