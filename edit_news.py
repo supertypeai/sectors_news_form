@@ -66,11 +66,15 @@ def edit():
         st.session_state.view_edit = "view2"
         prev_data = next((item for item in data if item["id"] == selected_id), None)
         if prev_data:
+            try:
+                timestamp = dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S.%f")
+            except ValueError:
+                timestamp = dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S")
             st.session_state.edit_title=prev_data["title"]
             st.session_state.edit_body=prev_data["body"]
             st.session_state.edit_source=prev_data["source"]
-            st.session_state.edit_date=dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S").date()
-            st.session_state.edit_time=dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S").time()
+            st.session_state.edit_date=timestamp.date()
+            st.session_state.edit_time=timestamp.time()
             st.session_state.edit_subsector=[option for option in prev_data["sub_sector"] if option in available_subsectors]
             st.session_state.edit_tags=", ".join(prev_data["tags"])
             st.session_state.edit_tickers=", ".join(prev_data["tickers"])
@@ -93,7 +97,7 @@ def post():
             "title": st.session_state.edit_title,
             "body": st.session_state.edit_body,
             "source": st.session_state.edit_source,
-            "timestamp": dt.combine(st.session_state.edit_date, st.session_state.edit_time).strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": dt.combine(st.session_state.edit_date, st.session_state.edit_time).strftime("%Y-%m-%dT%H:%M:%S"),
             "sub_sector": st.session_state.edit_subsector,
             "tags": tags_list,
             "tickers": tickers_list,

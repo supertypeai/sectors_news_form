@@ -127,12 +127,16 @@ def post():
             res_prev = requests.get(f"https://sectors-news-endpoint.fly.dev/articles?id={dup['id_duplicate']}", headers = headers)
             if res_prev.status_code == 200:
                 prev = res_prev.json()[0]
+                try:
+                    timestamp = dt.strptime(prev["timestamp"], "%Y-%m-%dT%H:%M:%S.%f")
+                except ValueError:
+                    timestamp = dt.strptime(prev["timestamp"], "%Y-%m-%dT%H:%M:%S")
                 st.session_state.title=prev["title"]
                 st.session_state.body=prev["body"]
                 st.session_state.source=prev["source"]
                 st.session_state.subsector=prev["sub_sector"]
-                st.session_state.date=dt.strptime(prev["timestamp"], "%Y-%m-%dT%H:%M:%S").date()
-                st.session_state.time=dt.strptime(prev["timestamp"], "%Y-%m-%dT%H:%M:%S").time()
+                st.session_state.date=timestamp.date()
+                st.session_state.time=timestamp.time()
                 st.session_state.tags=', '.join(prev["tags"])
                 st.session_state.tickers=', '.join(prev["tickers"])
                 st.session_state.dimension = json.dumps(prev["dimension"])

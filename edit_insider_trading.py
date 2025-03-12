@@ -66,7 +66,10 @@ def edit():
         st.session_state.pdf_edit_view = "view2"
         prev_data = next((item for item in data if item["id"] == selected_id), None)
         if prev_data:
-            timestamp = dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S")
+            try:
+                timestamp = dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S.%f")
+            except ValueError:
+                timestamp = dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S")
             st.session_state.pdf_edit_source=prev_data["source"]
             st.session_state.pdf_edit_title=prev_data["title"]
             st.session_state.pdf_edit_body=prev_data["body"]
