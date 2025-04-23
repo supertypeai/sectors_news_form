@@ -60,7 +60,9 @@ def post():
             "source": st.session_state.source,
             "ticker": st.session_state.ticker,
             "holding_before": st.session_state.holding_before, 
+            "share_percentage_before": st.session_state.share_percentage_before,
             "holding_after": st.session_state.holding_after,
+            "share_percentage_after": st.session_state.share_percentage_after,
             "sub_sector": st.session_state.subsector,
             "purpose": st.session_state.purpose,
             "holder_type": st.session_state.holder_type,
@@ -82,7 +84,9 @@ def post():
             st.session_state.source = ""
             st.session_state.ticker = ""
             st.session_state.holding_before = 0
+            st.session_state.share_percentage_before = 0
             st.session_state.holding_after = 0
+            st.session_state.share_percentage_after = 0
             st.session_state.subsector = available_subsectors[0]
             st.session_state.purpose = ""
             st.session_state.holder_type="insider"
@@ -109,7 +113,9 @@ holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder
 subsector = insider.selectbox("Subsector:red[*]", options = available_subsectors, format_func=format_option, key="subsector")
 ticker = insider.text_input("Ticker:red[*]", placeholder="Enter ticker", key="ticker")
 holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="holding_before", min_value=0)
+share_percentage_before = insider.number_input("Stock Ownership Percentage before Transaction:red[*]", placeholder="Enter stock ownership percentage before transaction", key="share_percentage_before", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
 holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="holding_after", min_value=0)
+share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
 purpose = insider.text_input("Transaction Purpose:red[*]", placeholder="Enter transaction purpose", key="purpose")
 holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="holder_type")
 
