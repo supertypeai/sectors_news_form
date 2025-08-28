@@ -122,9 +122,10 @@ def post():
         st.toast("Please fill out the required fields.")
     else:
         if st.session_state.pdf_uid:
-            final_uid = st.session_state.pdf_edit_uid
+            final_uid = st.session_state.pdf_uid
         else:
-            final_uid = st.session_state.get("uuid_field_manual", "")
+            manual_uid = st.session_state.get("uuid_field_manual", "")
+            final_uid = manual_uid if manual_uid else None
 
         tags_list = [tag.strip() for tag in st.session_state.pdf_edit_tags.split(',') if tag.strip()]
         tickers_list = [ticker.strip() for ticker in st.session_state.pdf_edit_tickers.split(',') if ticker.strip()]
@@ -216,7 +217,7 @@ if 'generate_uid' not in st.session_state:
     st.session_state.generate_uid = False
 
 if 'pdf_uid' not in st.session_state:
-    st.session_state.pdf_uid = ""
+    st.session_state.pdf_uid = None
 
 st.title("Sectors News")
 
@@ -262,6 +263,7 @@ elif st.session_state.pdf_edit_view == "view2":
         uid = insider.text_input(
             "UID*", 
             disabled=False, 
+            value= st.session_state.get("pdf_edit_uid", ""),
             key="uuid_field_manual"
         )
 

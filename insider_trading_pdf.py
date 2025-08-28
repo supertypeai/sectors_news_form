@@ -289,7 +289,7 @@ if 'generate_uuid' not in st.session_state:
     st.session_state.generate_uuid = False
 
 if 'pdf_uid' not in st.session_state:
-    st.session_state.pdf_uid = ""
+    st.session_state.pdf_uid = None
 
 st.title("Sectors News")
 

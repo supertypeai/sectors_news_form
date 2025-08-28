@@ -51,7 +51,8 @@ def post():
     if st.session_state.uuid:
         final_uuid = st.session_state.uuid
     else:
-        final_uuid = st.session_state.get("uuid_field_manual", "")
+        manual_uid = st.session_state.get("uuid_field_manual", "")
+        final_uuid = manual_uid if manual_uid else None
 
     if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.purpose or not st.session_state.holder_type or not st.session_state.transaction_type or not st.session_state.price_transaction:
         st.toast("Please fill out the required fields.")
@@ -60,7 +61,7 @@ def post():
         for i in range(len(st.session_state.price_transaction["amount_transacted"])):
             final_t["amount_transacted"].append(st.session_state[f"amount_{i}"])
             final_t["prices"].append(st.session_state[f"price_{i}"])
-            
+
         data = {
             "document_number": st.session_state.doc_number,
             "company_name": st.session_state.company_name,
@@ -132,7 +133,7 @@ if 'uuid' not in st.session_state:
     st.session_state.generated_uuid = False
 
 if 'uuid' not in st.session_state:
-    st.session_state.uuid = ""
+    st.session_state.uuid = None
 
 if checkbox_uuid:
     uuid_field = insider.text_input("UUID", 
