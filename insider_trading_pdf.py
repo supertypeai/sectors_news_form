@@ -351,7 +351,6 @@ elif st.session_state.pdf_view == "post":
     holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="pdf_holding_before", min_value=0)
     share_percentage_before = insider.number_input("Stock Ownership Percentage before Transaction:red[*]", placeholder="Enter stock ownership percentage before transaction", key="pdf_share_percentage_before", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
     amount_transaction = insider.number_input("Amount Transaction:red[*]", placeholder="Enter amount transaction", key="pdf_amount")
-    trans_type = insider.selectbox("Transaction Type:red[*]", options = ["buy", "sell"], format_func=format_option, key="pdf_transaction_type")
     holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="pdf_holding_after", min_value=0)
     share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="pdf_share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
     subsector = insider.selectbox("Subsector:red[*]", options = AVAILABLE_SUBSECTORS, format_func=format_option, key="pdf_subsector")
@@ -379,6 +378,11 @@ elif st.session_state.pdf_view == "post":
         price_transaction["prices"].append(0)
         st.rerun()
 
+    trans_type = transaction_container.selectbox("Transaction Type:red[*]", 
+                                                           options = ["buy", "sell"],
+                                                            format_func=format_option, 
+                                                            key="pdf_transaction_type")
+    
     st.session_state.pdf_price_transaction = price_transaction
 
     price = insider.number_input("Price*", disabled=True, key="pdf_price")
@@ -396,7 +400,6 @@ elif st.session_state.pdf_view == "post":
         recipient_holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="recipient_holding_before", min_value=0)
         recipient_share_percentage_before = insider.number_input("Stock Ownership Percentage before Transaction:red[*]", placeholder="Enter stock ownership percentage before transaction", key="recipient_share_percentage_before", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
         recipient_amount_transaction = insider.number_input("Amount Transaction:red[*]", placeholder="Enter amount transaction", key="recipient_amount")
-        recipient_trans_type = insider.selectbox("Transaction Type:red[*]", options = ["buy", "sell"], format_func=format_option, key="recipient_transaction_type")
         recipient_holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="recipient_holding_after", min_value=0)
         recipient_share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="recipient_share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
         recipient_subsector = insider.selectbox("Subsector:red[*]", options = AVAILABLE_SUBSECTORS, format_func=format_option, key="recipient_subsector")
@@ -424,6 +427,11 @@ elif st.session_state.pdf_view == "post":
             recipient_price_transaction["prices"].append(0)
             st.rerun()
 
+        recipient_trans_type = recipient_transaction_container.selectbox("Transaction Type:red[*]", 
+                                                 options = ["buy", "sell"], 
+                                                 format_func=format_option, 
+                                                 key="recipient_transaction_type")
+       
         st.session_state.recipient_price_transaction = recipient_price_transaction
 
         recipient_price = insider.number_input("Price*", disabled=True, key="recipient_price")

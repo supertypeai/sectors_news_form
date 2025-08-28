@@ -274,9 +274,10 @@ elif st.session_state.pdf_edit_view == "view2":
     holder_type = insider.selectbox("Holder Type:red[*]", index= ["insider", "institution"].index(st.session_state.get("pdf_edit_holder_type", "insider")), options = ["insider", "institution"], format_func=format_option, key="pdf_edit_holder_type")
     
     holding_before = insider.number_input("Stock Holding before Transaction:red[*]", 
-                                          value= st.session_state.get("pdf_edit_holding_before", 0), 
-                                          placeholder="Enter stock holding before transaction", 
-                                          key="pdf_edit_holding_before", min_value=0)
+        value= st.session_state.get("pdf_edit_holding_before", 0), 
+        placeholder="Enter stock holding before transaction", 
+        key="pdf_edit_holding_before", min_value=0
+    )
    
     share_percentage_before = insider.number_input(
         "Stock Ownership Percentage before Transaction:red[*]",
@@ -296,9 +297,10 @@ elif st.session_state.pdf_edit_view == "view2":
     )
     
     holding_after = insider.number_input("Stock Holding after Transaction:red[*]", 
-                                         value= st.session_state.get("pdf_edit_holding_after", 0), 
-                                         placeholder="Enter stock holding after transaction", 
-                                         key="pdf_edit_holding_after", min_value=0)
+        value= st.session_state.get("pdf_edit_holding_after", 0), 
+        placeholder="Enter stock holding after transaction", 
+        key="pdf_edit_holding_after", min_value=0
+    )
     
     share_percentage_after = insider.number_input(
         "Stock Ownership Percentage after Transaction:red[*]", 
