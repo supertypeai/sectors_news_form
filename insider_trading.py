@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime as dt
 import requests
+import uuid 
 
 # data
 api_key = st.secrets["API_KEY"]
@@ -46,18 +47,26 @@ def format_option(option):
     return option.replace("-", " ").title()
 
 def post():
-    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.purpose or not st.session_state.holder_type or not st.session_state.price_transaction:
+    final_uuid = ""
+    if st.session_state.uuid:
+        final_uuid = st.session_state.uuid
+    else:
+        final_uuid = st.session_state.get("uuid_field_manual", "")
+
+    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.purpose or not st.session_state.holder_type or not st.session_state.transaction_type or not st.session_state.price_transaction:
         st.toast("Please fill out the required fields.")
     else:
         final_t = {"amount_transacted": [], "prices": []}
         for i in range(len(st.session_state.price_transaction["amount_transacted"])):
             final_t["amount_transacted"].append(st.session_state[f"amount_{i}"])
             final_t["prices"].append(st.session_state[f"price_{i}"])
+            
         data = {
             "document_number": st.session_state.doc_number,
             "company_name": st.session_state.company_name,
             "shareholder_name": st.session_state.holder_name,
             "source": st.session_state.source,
+            "UID": final_uuid,
             "ticker": st.session_state.ticker,
             "holding_before": st.session_state.holding_before, 
             "share_percentage_before": st.session_state.share_percentage_before,
@@ -66,6 +75,7 @@ def post():
             "sub_sector": st.session_state.subsector,
             "purpose": st.session_state.purpose,
             "holder_type": st.session_state.holder_type,
+            "transaction_type": st.session_state.transaction_type,
             "date_time": dt.combine(st.session_state.date, st.session_state.time).strftime("%Y-%m-%d %H:%M:%S"),
             "price_transaction": final_t
         }
@@ -82,6 +92,7 @@ def post():
             st.session_state.company_name = ""
             st.session_state.holder_name = ""
             st.session_state.source = ""
+            st.session_state.uuid = ""
             st.session_state.ticker = ""
             st.session_state.holding_before = 0
             st.session_state.share_percentage_before = 0
@@ -92,19 +103,52 @@ def post():
             st.session_state.holder_type="insider"
             st.session_state.date = dt.today()
             st.session_state.time = dt.now()
+            st.session_state.transaction_type = "buy" 
             st.session_state.price_transaction = None
         else:
             # Handle error
             st.error(f"Error: Something went wrong. Please try again.")
-  
+
+def uuid_on_change():
+    if st.session_state.generate_uuid:
+        st.session_state.uuid = str(uuid.uuid4())  
+    else:
+        st.session_state.uuid = ""
+
 # app
 st.title("Sectors News")
+
+checkbox_uuid = st.checkbox("Generate UUID", 
+                             key="generate_uuid", 
+                            on_change=uuid_on_change)
 
 insider = st.form('insider')
 
 insider.subheader("Add Insider Trading (Non-IDX Format)")
 insider.caption(":red[*] _required_")
 source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="source")
+
+if 'uuid' not in st.session_state:
+    st.session_state.generated_uuid = False
+
+if 'uuid' not in st.session_state:
+    st.session_state.uuid = ""
+
+if checkbox_uuid:
+    uuid_field = insider.text_input("UUID", 
+        value=st.session_state.uuid, 
+        key="uuid_field",
+        disabled=True,
+        help="Auto-generated UUID"
+    )
+else:
+    # Manual entry mode
+    uuid_field = insider.text_input("UUID", 
+        placeholder="Enter UUID manually", 
+        key="uuid_field_manual",
+        help="Enter UUID manually"
+    )
+
 date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), format="YYYY-MM-DD", key="date")
 time = insider.time_input("Created Time (GMT+7)*:red[*]", key="time", step=60)
 doc_number = insider.text_input("Document Number:red[*]", placeholder="Enter document number", key="doc_number")
@@ -139,6 +183,11 @@ if transaction_container.form_submit_button("Add Transaction"):
     price_transaction["amount_transacted"].append(0)
     price_transaction["prices"].append(0)
     st.rerun()
+
+transaction_type_value = transaction_container.selectbox(
+    "Transaction Type:red[*]", options = ["buy", "sell"], 
+    format_func=format_option, key="transaction_type"
+)
 
 st.session_state.price_transaction = price_transaction
 
