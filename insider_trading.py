@@ -1,12 +1,14 @@
-import streamlit as st
 from datetime import datetime as dt
+
+import streamlit as st
 import requests
 import uuid 
 
-# data
-api_key = st.secrets["API_KEY"]
 
-available_subsectors = [
+# data
+API_KEY = st.secrets["API_KEY"]
+
+AVAILABLE_SUBSECTORS = [
   "alternative-energy",
   "apparel-luxury-goods",
   "automobiles-components",
@@ -42,6 +44,7 @@ available_subsectors = [
   "utilities"
 ]
 
+
 # helper functions
 def format_option(option):
     return option.replace("-", " ").title()
@@ -54,13 +57,15 @@ def post():
         manual_uid = st.session_state.get("uuid_field_manual", "")
         final_uuid = manual_uid if manual_uid else None
 
-    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.purpose or not st.session_state.holder_type or not st.session_state.transaction_type or not st.session_state.price_transaction:
+    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.purpose or not st.session_state.holder_type or not st.session_state.price_transaction: # or not st.session_state.transaction_type:
         st.toast("Please fill out the required fields.")
     else:
-        final_t = {"amount_transacted": [], "prices": []}
-        for i in range(len(st.session_state.price_transaction["amount_transacted"])):
-            final_t["amount_transacted"].append(st.session_state[f"amount_{i}"])
-            final_t["prices"].append(st.session_state[f"price_{i}"])
+        final_transaction= {"amount_transacted": [], "prices": [], "types": []}
+        length_price_transaction = len(st.session_state.price_transaction["amount_transacted"])
+        for index in range(length_price_transaction):
+            final_transaction["amount_transacted"].append(st.session_state[f"amount_{index}"])
+            final_transaction["prices"].append(st.session_state[f"price_{index}"])
+            final_transaction['types'].append(st.session_state[f"types_{index}"])
 
         data = {
             "document_number": st.session_state.doc_number,
@@ -76,13 +81,15 @@ def post():
             "sub_sector": st.session_state.subsector,
             "purpose": st.session_state.purpose,
             "holder_type": st.session_state.holder_type,
-            "transaction_type": st.session_state.transaction_type,
+            # "transaction_type": st.session_state.transaction_type,
             "date_time": dt.combine(st.session_state.date, st.session_state.time).strftime("%Y-%m-%d %H:%M:%S"),
-            "price_transaction": final_t
+            "price_transaction": final_transaction
         }
 
+        st.write(data)
+
         headers = {
-            "Authorization": f"Bearer {api_key}"
+            "Authorization": f"Bearer {API_KEY}"
         }
 
         response = requests.post("https://sectors-news-endpoint.fly.dev/insider-trading", headers = headers, json=data)
@@ -99,7 +106,7 @@ def post():
             st.session_state.share_percentage_before = 0
             st.session_state.holding_after = 0
             st.session_state.share_percentage_after = 0
-            st.session_state.subsector = available_subsectors[0]
+            st.session_state.subsector = AVAILABLE_SUBSECTORS[0]
             st.session_state.purpose = ""
             st.session_state.holder_type="insider"
             st.session_state.date = dt.today()
@@ -117,79 +124,103 @@ def uuid_on_change():
         st.session_state.uuid = ""
 
 # app
-st.title("Sectors News")
+def main_ui():
+    st.title("Sectors News")
 
-checkbox_uuid = st.checkbox("Generate UUID", 
-                             key="generate_uuid", 
-                            on_change=uuid_on_change)
+    # Initialize session state variables  
+    if 'uuid' not in st.session_state:
+        st.session_state.generated_uuid = False
 
-insider = st.form('insider')
+    if 'uuid' not in st.session_state:
+        st.session_state.uuid = None
 
-insider.subheader("Add Insider Trading (Non-IDX Format)")
-insider.caption(":red[*] _required_")
-source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="source")
+    if "price_transaction" not in st.session_state:
+        st.session_state.price_transaction = {
+            "amount_transacted": [],
+            "prices": [], 
+            "types": []
+        }
 
-if 'uuid' not in st.session_state:
-    st.session_state.generated_uuid = False
+    price_transaction = st.session_state.price_transaction
 
-if 'uuid' not in st.session_state:
-    st.session_state.uuid = None
+    if "types" not in price_transaction:
+        price_transaction["types"] = []
+    if "amount_transacted" not in price_transaction:
+        price_transaction["amount_transacted"] = []
+    if "prices" not in price_transaction:
+        price_transaction["prices"] = []
 
-if checkbox_uuid:
-    uuid_field = insider.text_input("UUID", 
-        value=st.session_state.uuid, 
-        key="uuid_field",
-        disabled=True,
-        help="Auto-generated UUID"
-    )
-else:
-    # Manual entry mode
-    uuid_field = insider.text_input("UUID", 
-        placeholder="Enter UUID manually", 
-        key="uuid_field_manual",
-        help="Enter UUID manually"
-    )
+    # Form for insider trading input
+    checkbox_uuid = st.checkbox("Generate UUID", 
+                                key="generate_uuid", 
+                                on_change=uuid_on_change)
 
-date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), format="YYYY-MM-DD", key="date")
-time = insider.time_input("Created Time (GMT+7)*:red[*]", key="time", step=60)
-doc_number = insider.text_input("Document Number:red[*]", placeholder="Enter document number", key="doc_number")
-company_name = insider.text_input("Company Name:red[*]", placeholder="Enter company name", key="company_name")
-holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder name", key="holder_name")
-subsector = insider.selectbox("Subsector:red[*]", options = available_subsectors, format_func=format_option, key="subsector")
-ticker = insider.text_input("Ticker:red[*]", placeholder="Enter ticker", key="ticker")
-holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="holding_before", min_value=0)
-share_percentage_before = insider.number_input("Stock Ownership Percentage before Transaction:red[*]", placeholder="Enter stock ownership percentage before transaction", key="share_percentage_before", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
-holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="holding_after", min_value=0)
-share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
-purpose = insider.text_input("Transaction Purpose:red[*]", placeholder="Enter transaction purpose", key="purpose")
-holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="holder_type")
+    insider = st.form('insider')
 
-price_transaction = st.session_state.get("price_transaction", {"amount_transacted": [], "prices": []})
-if price_transaction is None:
-    price_transaction = {"amount_transacted": [], "prices": []}
+    insider.subheader("Add Insider Trading (Non-IDX Format)")
+    insider.caption(":red[*] _required_")
+    
+    source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="source")
 
-transaction_container = insider.expander("Transactions", expanded=True)
+    if checkbox_uuid:
+        uuid_field = insider.text_input("UUID", 
+            value=st.session_state.uuid, 
+            key="uuid_field",
+            disabled=True,
+            help="Auto-generated UUID"
+        )
+    else:
+        # Manual entry mode
+        uuid_field = insider.text_input("UUID", 
+            placeholder="Enter UUID manually", 
+            key="uuid_field_manual",
+            help="Enter UUID manually"
+        )
 
-for idx, (amount, price) in enumerate(zip(price_transaction["amount_transacted"], price_transaction["prices"])):
-    col1, col2, col3 = transaction_container.columns([2, 2, 2], vertical_alignment="bottom")
-    price_transaction["amount_transacted"][idx] = col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"amount_{idx}")
-    price_transaction["prices"][idx] = col2.number_input(f"Price {idx + 1}", value=price, key=f"price_{idx}")
-    remove_button = col3.form_submit_button(f"Remove Transaction {idx + 1}")
-    if remove_button:
-        price_transaction["amount_transacted"].pop(idx)
-        price_transaction["prices"].pop(idx)
+    date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), format="YYYY-MM-DD", key="date")
+    time = insider.time_input("Created Time (GMT+7)*:red[*]", key="time", step=60)
+    doc_number = insider.text_input("Document Number:red[*]", placeholder="Enter document number", key="doc_number")
+    company_name = insider.text_input("Company Name:red[*]", placeholder="Enter company name", key="company_name")
+    holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder name", key="holder_name")
+    subsector = insider.selectbox("Subsector:red[*]", options = AVAILABLE_SUBSECTORS, format_func=format_option, key="subsector")
+    ticker = insider.text_input("Ticker:red[*]", placeholder="Enter ticker", key="ticker")
+    holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="holding_before", min_value=0)
+    share_percentage_before = insider.number_input("Stock Ownership Percentage before Transaction:red[*]", placeholder="Enter stock ownership percentage before transaction", key="share_percentage_before", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
+    holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="holding_after", min_value=0)
+    share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
+    purpose = insider.text_input("Transaction Purpose:red[*]", placeholder="Enter transaction purpose", key="purpose")
+    holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="holder_type")
+
+
+    transaction_container = insider.expander("Transactions", expanded=True)
+
+    for idx, (amount, price, type) in enumerate(zip(price_transaction["amount_transacted"], price_transaction["prices"], price_transaction["types"])):
+        col1, col2, col3, col4 = transaction_container.columns([2, 2, 2, 2], vertical_alignment="bottom")
+        
+        price_transaction["amount_transacted"][idx] = col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"amount_{idx}")
+        price_transaction["prices"][idx] = col2.number_input(f"Price {idx + 1}", value=price, key=f"price_{idx}")
+        price_transaction["types"][idx] = col3.selectbox(f"Type {idx + 1}",
+                                                          options=["buy", "sell"], 
+                                                          index=0 if type == "buy" else 1, 
+                                                          format_func=format_option,
+                                                          key=f"types_{idx}")
+        
+        remove_button = col4.form_submit_button(f"Remove Transaction {idx + 1}")
+        if remove_button:
+            price_transaction["amount_transacted"].pop(idx)
+            price_transaction["prices"].pop(idx)
+            price_transaction["types"].pop(idx)
+            st.rerun()
+
+    if transaction_container.form_submit_button("Add Transaction"):
+        price_transaction["amount_transacted"].append(0)
+        price_transaction["prices"].append(0)
+        price_transaction["types"].append("buy")
         st.rerun()
 
-if transaction_container.form_submit_button("Add Transaction"):
-    price_transaction["amount_transacted"].append(0)
-    price_transaction["prices"].append(0)
-    st.rerun()
+    st.session_state.price_transaction = price_transaction
 
-transaction_type_value = transaction_container.selectbox(
-    "Transaction Type:red[*]", options = ["buy", "sell"], 
-    format_func=format_option, key="transaction_type"
-)
+    submit = insider.form_submit_button("Submit", on_click=post)
 
-st.session_state.price_transaction = price_transaction
-
-submit = insider.form_submit_button("Submit", on_click=post)
+if __name__ == "__main__":
+    main_ui()
