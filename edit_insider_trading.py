@@ -298,6 +298,8 @@ def main_ui():
         holder_name = insider.text_input("Holder Name:red[*]", value= st.session_state.get("pdf_edit_holder_name", ""), placeholder="Enter holder name", key="pdf_edit_holder_name")
         holder_type = insider.selectbox("Holder Type:red[*]", index= ["insider", "institution"].index(st.session_state.get("pdf_edit_holder_type", "insider")), options = ["insider", "institution"], format_func=format_option, key="pdf_edit_holder_type")
         
+        
+
         holding_before = insider.number_input("Stock Holding before Transaction:red[*]", 
             value= st.session_state.get("pdf_edit_holding_before", 0), 
             placeholder="Enter stock holding before transaction", 
@@ -306,7 +308,7 @@ def main_ui():
     
         share_percentage_before = insider.number_input(
             "Stock Ownership Percentage before Transaction:red[*]",
-            value=float(st.session_state.get("pdf_edit_share_percentage_before", 0.0)), 
+            value=st.session_state.get("pdf_edit_share_percentage_before"), 
             placeholder="Enter stock ownership percentage before transaction",
             key="pdf_edit_share_percentage_before", min_value=0.00000,
             max_value=100.00000, 
@@ -329,7 +331,7 @@ def main_ui():
         
         share_percentage_after = insider.number_input(
             "Stock Ownership Percentage after Transaction:red[*]", 
-            value=float(st.session_state.get("pdf_edit_share_percentage_after", 0.0)),
+            value=st.session_state.get("pdf_edit_share_percentage_after"),
             placeholder="Enter stock ownership percentage after transaction", 
             key="pdf_edit_share_percentage_after", 
             min_value=0.00000, 
