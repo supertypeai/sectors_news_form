@@ -99,8 +99,6 @@ def edit():
             st.session_state.pdf_edit_trans_value = prev_data["transaction_value"]
             st.session_state.pdf_edit_view = "view2"
 
-            st.write(f'debug: {st.session_state.pdf_edit_price_transaction}')
-
             # Check if types key exists in price_transaction
             price_transaction = prev_data["price_transaction"]
             if (price_transaction and 
@@ -171,8 +169,6 @@ def post():
         headers = {
             "Authorization": f"Bearer {API_KEY}"
         }
-
-        st.write("Data to be sent for update:", data)  
         
         response = requests.patch(
             "https://sectors-news-endpoint.fly.dev/insider-trading", 
