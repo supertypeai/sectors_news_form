@@ -93,6 +93,9 @@ def generate():
             st.session_state.pdf_price_transaction = autogen["price_transaction"]
             st.session_state.pdf_price = autogen["price"]
             st.session_state.pdf_trans_value = autogen["transaction_value"]
+
+            st.write(f"debug transactions recipient: {st.session_state.pdf_price_transaction}")
+            
             if not st.session_state.share_transfer:
                 st.session_state.pdf_view = "post"
         else:
@@ -363,14 +366,14 @@ def main_ui():
         subsector = insider.selectbox("Subsector:red[*]", options = AVAILABLE_SUBSECTORS, format_func=format_option, key="pdf_subsector")
         tags = insider.text_area("Tags:red[*]", placeholder="Enter tags separated by commas, e.g. idx, market-cap", key="pdf_tags")
         tickers = insider.text_area("Tickers:red[*]", placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="pdf_tickers")
-
+        
         price_transaction = st.session_state.get("pdf_price_transaction", {"amount_transacted": [], "prices": []})
         if price_transaction is None:
             price_transaction = {"amount_transacted": [], "prices": [], 'types': []}
         
         transaction_container = insider.expander("Transactions", expanded=True)
 
-        for idx, (amount, price, type) in enumerate(zip(price_transaction["amount_transacted"], price_transaction.get["prices"], price_transaction.get["types"])):
+        for idx, (amount, price, type) in enumerate(zip(price_transaction["amount_transacted"], price_transaction["prices"], price_transaction["types"])):
             col1, col2, col3, col4 = transaction_container.columns([2, 2, 2, 2], vertical_alignment="bottom")
             
             price_transaction["amount_transacted"][idx] = col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"amount_{idx}")
