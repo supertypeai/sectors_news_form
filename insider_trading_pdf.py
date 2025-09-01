@@ -1,5 +1,6 @@
-import streamlit as st
 from datetime import datetime as dt
+
+import streamlit as st
 import requests
 import uuid
 
@@ -130,10 +131,13 @@ def post():
     else:
         tags_list = [tag.strip() for tag in st.session_state.pdf_tags.split(',') if tag.strip()]
         tickers_list = [ticker.strip() for ticker in st.session_state.pdf_tickers.split(',') if ticker.strip()]
-        final_t = {"amount_transacted": [], "prices": []}
-        for i in range(len(st.session_state.pdf_price_transaction["amount_transacted"])):
-            final_t["amount_transacted"].append(st.session_state[f"amount_{i}"])
-            final_t["prices"].append(st.session_state[f"price_{i}"])
+        
+        final_transaction = {"amount_transacted": [], "prices": [], "types": []}
+
+        for idx in range(len(st.session_state.pdf_price_transaction["amount_transacted"])):
+            final_transaction["amount_transacted"].append(st.session_state[f"amount_{idx}"])
+            final_transaction["prices"].append(st.session_state[f"price_{idx}"])
+            final_transaction['types'].append(st.session_state[f"type_{idx}"])
 
         data = {
             'source': st.session_state.pdf_source,
@@ -145,13 +149,13 @@ def post():
             'holding_before': st.session_state.pdf_holding_before,
             'share_percentage_before': st.session_state.pdf_share_percentage_before,
             'amount_transaction': st.session_state.pdf_amount,
-            'transaction_type': st.session_state.pdf_transaction_type,
+            # 'transaction_type': st.session_state.pdf_transaction_type,
             'holding_after': st.session_state.pdf_holding_after,
             'share_percentage_after': st.session_state.pdf_share_percentage_after,
             'sub_sector': st.session_state.pdf_subsector,
             'tags': tags_list,
             'tickers': tickers_list,
-            'price_transaction': final_t,
+            'price_transaction': final_transaction,
         }
 
         if st.session_state.share_transfer:
@@ -160,11 +164,13 @@ def post():
 
             recipient_tags_list = [tag.strip() for tag in st.session_state.recipient_tags.split(',') if tag.strip()]
             recipient_tickers_list = [ticker.strip() for ticker in st.session_state.recipient_tickers.split(',') if ticker.strip()]
-            recipient_final_t = {"amount_transacted": [], "prices": []}
             
-            for i in range(len(st.session_state.recipient_price_transaction["amount_transacted"])):
-                recipient_final_t["amount_transacted"].append(st.session_state[f"amount_{i}"])
-                recipient_final_t["prices"].append(st.session_state[f"price_{i}"])
+            recipient_final_t = {"amount_transacted": [], "prices": [], 'types': []}
+            
+            for idx in range(len(st.session_state.recipient_price_transaction["amount_transacted"])):
+                recipient_final_t["amount_transacted"].append(st.session_state[f"amount_{idx}"])
+                recipient_final_t["prices"].append(st.session_state[f"price_{idx}"])
+                recipient_final_t['types'].append(st.session_state[f"type_{idx}"])
 
             recipient_data = {
                 'UID': uid,
@@ -177,7 +183,7 @@ def post():
                 'holding_before': st.session_state.recipient_holding_before,
                 'share_percentage_before': st.session_state.recipient_share_percentage_before,
                 'amount_transaction': st.session_state.recipient_amount,
-                'transaction_type': st.session_state.recipient_transaction_type,
+                # 'transaction_type': st.session_state.recipient_transaction_type,
                 'holding_after': st.session_state.recipient_holding_after,
                 'share_percentage_after': st.session_state.recipient_share_percentage_after,
                 'sub_sector': st.session_state.recipient_subsector,
@@ -275,166 +281,178 @@ def on_generate_uid_change():
         # Clear UID when checkbox is unchecked
         st.session_state.pdf_uid = ""
 
-# app
-if 'pdf_view' not in st.session_state:
-    st.session_state.pdf_view = 'file'
+def main_ui():
+    # app
+    if 'pdf_view' not in st.session_state:
+        st.session_state.pdf_view = 'file'
 
-if 'pdf_edit' not in st.session_state:
-    st.session_state.pdf_edit = False
+    if 'pdf_edit' not in st.session_state:
+        st.session_state.pdf_edit = False
 
-if 'share_transfer' not in st.session_state:
-    st.session_state.share_transfer = False
+    if 'share_transfer' not in st.session_state:
+        st.session_state.share_transfer = False
 
-if 'generate_uuid' not in st.session_state:
-    st.session_state.generate_uuid = False
+    if 'generate_uuid' not in st.session_state:
+        st.session_state.generate_uuid = False
 
-if 'pdf_uid' not in st.session_state:
-    st.session_state.pdf_uid = None
+    if 'pdf_uid' not in st.session_state:
+        st.session_state.pdf_uid = None
 
-st.title("Sectors News")
+    st.title("Sectors News")
 
-# file submission
-if st.session_state.pdf_view == "file":
-    is_share_transfer = st.checkbox("Share Transfer", key="share_transfer")
+    # file submission
+    if st.session_state.pdf_view == "file":
+        is_share_transfer = st.checkbox("Share Transfer", key="share_transfer")
 
-    if not st.session_state.share_transfer:
-        generate_uid_checkbox = st.checkbox("Generate UID",
-            key="generate_uid", 
-            on_change=on_generate_uid_change
-        )
+        if not st.session_state.share_transfer:
+            generate_uid_checkbox = st.checkbox("Generate UID",
+                key="generate_uid", 
+                on_change=on_generate_uid_change
+            )
 
-    insider = st.form('insider')
+        insider = st.form('insider')
 
-    insider.subheader("Add Insider Trading (IDX Format)")
-    insider.caption(":red[*] _required_")
+        insider.subheader("Add Insider Trading (IDX Format)")
+        insider.caption(":red[*] _required_")
 
-    file = insider.file_uploader("Upload File (.pdf):red[*]", type="pdf", accept_multiple_files=False, key="file")
-    source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="pdf_source")
-    
-    if not st.session_state.share_transfer:
-        uid_value = st.session_state.pdf_uid if st.session_state.generate_uid else ""
-        uid = insider.text_input("UID", value=uid_value,
-            disabled=st.session_state.generate_uid,
-            key="pdf_uid_input"
-        )
+        file = insider.file_uploader("Upload File (.pdf):red[*]", type="pdf", accept_multiple_files=False, key="file")
+        source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="pdf_source")
         
-        # Update session state if manually edited
-        if not st.session_state.generate_uid:
-            st.session_state.pdf_uid = uid
+        if not st.session_state.share_transfer:
+            uid_value = st.session_state.pdf_uid if st.session_state.generate_uid else ""
+            uid = insider.text_input("UID", value=uid_value,
+                disabled=st.session_state.generate_uid,
+                key="pdf_uid_input"
+            )
+            
+            # Update session state if manually edited
+            if not st.session_state.generate_uid:
+                st.session_state.pdf_uid = uid
 
-    recipient_file = None
-    recipient_link = None
-    if st.session_state.share_transfer:
-        insider.markdown("### Recipient Filing Info")
-        recipient_file = insider.file_uploader("Upload File (.pdf):red[*]", type="pdf", accept_multiple_files=False, key="recipient_file")
-        recipient_link = insider.text_input("Source:red[*]", placeholder="Enter URL", key="recipient_source")
+        recipient_file = None
+        recipient_link = None
+        if st.session_state.share_transfer:
+            insider.markdown("### Recipient Filing Info")
+            recipient_file = insider.file_uploader("Upload File (.pdf):red[*]", type="pdf", accept_multiple_files=False, key="recipient_file")
+            recipient_link = insider.text_input("Source:red[*]", placeholder="Enter URL", key="recipient_source")
 
-    submit = insider.form_submit_button("Submit", on_click=generate)
+        submit = insider.form_submit_button("Submit", on_click=generate)
 
-elif st.session_state.pdf_view == "post":
-    is_share_transfer = st.checkbox("Share Transfer", key="share_transfer", disabled=True)
-    if not st.session_state.share_transfer:
-        generate_uid_checkbox = st.checkbox("Generate UID", key="generate_uuid", disabled=True)
-    
-    insider = st.form('insider')
+    elif st.session_state.pdf_view == "post":
+        is_share_transfer = st.checkbox("Share Transfer", key="share_transfer", disabled=True)
+        if not st.session_state.share_transfer:
+            generate_uid_checkbox = st.checkbox("Generate UID", key="generate_uuid", disabled=True)
+        
+        insider = st.form('insider')
 
-    insider.subheader("Add Insider Trading (IDX Format)")
-    back_button = insider.form_submit_button("< Back", on_click=back)
-    insider.caption(":red[*] _required_")
-    source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="pdf_source")
-    title = insider.text_input("Title:red[*]", placeholder="Enter title", key="pdf_title")
-    body = insider.text_area("Body:red[*]", placeholder="Enter body", key="pdf_body")
-    date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), format="YYYY-MM-DD", key="pdf_date")
-    time = insider.time_input("Created Time (GMT+7)*:red[*]", key="pdf_time", step=60)
-    holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder name", key="pdf_holder_name")
-    holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="pdf_holder_type")
-    holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="pdf_holding_before", min_value=0)
-    share_percentage_before = insider.number_input("Stock Ownership Percentage before Transaction:red[*]", placeholder="Enter stock ownership percentage before transaction", key="pdf_share_percentage_before", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
-    amount_transaction = insider.number_input("Amount Transaction:red[*]", placeholder="Enter amount transaction", key="pdf_amount")
-    holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="pdf_holding_after", min_value=0)
-    share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="pdf_share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
-    subsector = insider.selectbox("Subsector:red[*]", options = AVAILABLE_SUBSECTORS, format_func=format_option, key="pdf_subsector")
-    tags = insider.text_area("Tags:red[*]", placeholder="Enter tags separated by commas, e.g. idx, market-cap", key="pdf_tags")
-    tickers = insider.text_area("Tickers:red[*]", placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="pdf_tickers")
+        insider.subheader("Add Insider Trading (IDX Format)")
+        back_button = insider.form_submit_button("< Back", on_click=back)
+        insider.caption(":red[*] _required_")
+        source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="pdf_source")
+        title = insider.text_input("Title:red[*]", placeholder="Enter title", key="pdf_title")
+        body = insider.text_area("Body:red[*]", placeholder="Enter body", key="pdf_body")
+        date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), format="YYYY-MM-DD", key="pdf_date")
+        time = insider.time_input("Created Time (GMT+7)*:red[*]", key="pdf_time", step=60)
+        holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder name", key="pdf_holder_name")
+        holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="pdf_holder_type")
+        holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="pdf_holding_before", min_value=0)
+        share_percentage_before = insider.number_input("Stock Ownership Percentage before Transaction:red[*]", placeholder="Enter stock ownership percentage before transaction", key="pdf_share_percentage_before", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
+        amount_transaction = insider.number_input("Amount Transaction:red[*]", placeholder="Enter amount transaction", key="pdf_amount")
+        holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="pdf_holding_after", min_value=0)
+        share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="pdf_share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
+        subsector = insider.selectbox("Subsector:red[*]", options = AVAILABLE_SUBSECTORS, format_func=format_option, key="pdf_subsector")
+        tags = insider.text_area("Tags:red[*]", placeholder="Enter tags separated by commas, e.g. idx, market-cap", key="pdf_tags")
+        tickers = insider.text_area("Tickers:red[*]", placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="pdf_tickers")
 
-    price_transaction = st.session_state.get("pdf_price_transaction", {"amount_transacted": [], "prices": []})
-    if price_transaction is None:
-        price_transaction = {"amount_transacted": [], "prices": []}
+        price_transaction = st.session_state.get("pdf_price_transaction", {"amount_transacted": [], "prices": []})
+        if price_transaction is None:
+            price_transaction = {"amount_transacted": [], "prices": [], 'types': []}
+        
+        transaction_container = insider.expander("Transactions", expanded=True)
 
-    transaction_container = insider.expander("Transactions", expanded=True)
+        for idx, (amount, price, type) in enumerate(zip(price_transaction["amount_transacted"], price_transaction.get["prices"], price_transaction.get["types"])):
+            col1, col2, col3, col4 = transaction_container.columns([2, 2, 2, 2], vertical_alignment="bottom")
+            
+            price_transaction["amount_transacted"][idx] = col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"amount_{idx}")
+            price_transaction["prices"][idx] = col2.number_input(f"Price {idx + 1}", value=price, key=f"price_{idx}")
+            price_transaction["types"][idx] = col3.selectbox(f"Type {idx + 1}", 
+                                                        options = ["buy", "sell"], 
+                                                        index=0 if type.lower() == "buy" else 1, 
+                                                        format_func=format_option, 
+                                                        key=f"type_{idx}")
 
-    for idx, (amount, price) in enumerate(zip(price_transaction["amount_transacted"], price_transaction["prices"])):
-        col1, col2, col3 = transaction_container.columns([2, 2, 2], vertical_alignment="bottom")
-        price_transaction["amount_transacted"][idx] = col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"amount_{idx}")
-        price_transaction["prices"][idx] = col2.number_input(f"Price {idx + 1}", value=price, key=f"price_{idx}")
-        remove_button = col3.form_submit_button(f"Remove Transaction {idx + 1}")
-        if remove_button:
-            price_transaction["amount_transacted"].pop(idx)
-            price_transaction["prices"].pop(idx)
-            st.rerun()
-
-    if transaction_container.form_submit_button("Add Transaction"):
-        price_transaction["amount_transacted"].append(0)
-        price_transaction["prices"].append(0)
-        st.rerun()
-
-    trans_type = transaction_container.selectbox("Transaction Type:red[*]", 
-                                                           options = ["buy", "sell"],
-                                                            format_func=format_option, 
-                                                            key="pdf_transaction_type")
-    
-    st.session_state.pdf_price_transaction = price_transaction
-
-    price = insider.number_input("Price*", disabled=True, key="pdf_price")
-    transaction_value = insider.number_input("Transaction Value*", disabled=True, key="pdf_trans_value")
-
-    if st.session_state.share_transfer:
-        insider.markdown("### Recipient Filing Info")
-        recipient_source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="recipient_source")
-        recipient_title = insider.text_input("Title:red[*]", placeholder="Enter title", key="recipient_title")
-        recipient_body = insider.text_area("Body:red[*]", placeholder="Enter body", key="recipient_body")
-        recipient_date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), format="YYYY-MM-DD", key="recipient_date")
-        recipient_time = insider.time_input("Created Time (GMT+7)*:red[*]", key="recipient_time", step=60)
-        recipient_holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder name", key="recipient_holder_name")
-        recipient_holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="recipient_holder_type")
-        recipient_holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="recipient_holding_before", min_value=0)
-        recipient_share_percentage_before = insider.number_input("Stock Ownership Percentage before Transaction:red[*]", placeholder="Enter stock ownership percentage before transaction", key="recipient_share_percentage_before", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
-        recipient_amount_transaction = insider.number_input("Amount Transaction:red[*]", placeholder="Enter amount transaction", key="recipient_amount")
-        recipient_holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="recipient_holding_after", min_value=0)
-        recipient_share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="recipient_share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
-        recipient_subsector = insider.selectbox("Subsector:red[*]", options = AVAILABLE_SUBSECTORS, format_func=format_option, key="recipient_subsector")
-        recipient_tags = insider.text_area("Tags:red[*]", placeholder="Enter tags separated by commas, e.g. idx, market-cap", key="recipient_tags")
-        recipient_tickers = insider.text_area("Tickers:red[*]", placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="recipient_tickers")
-
-        recipient_price_transaction = st.session_state.get("recipient_price_transaction", {"amount_transacted": [], "prices": []})
-        if recipient_price_transaction is None:
-            recipient_price_transaction = {"amount_transacted": [], "prices": []}
-
-        recipient_transaction_container = insider.expander("Transactions", expanded=True)
-
-        for idx, (amount, price) in enumerate(zip(recipient_price_transaction["amount_transacted"], recipient_price_transaction["prices"])):
-            col1, col2, col3 = recipient_transaction_container.columns([2, 2, 2], vertical_alignment="bottom")
-            recipient_price_transaction["amount_transacted"][idx] = col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"recipient_amount_{idx}")
-            recipient_price_transaction["prices"][idx] = col2.number_input(f"Price {idx + 1}", value=price, key=f"recipient_price_{idx}")
-            recipient_remove_button = col3.form_submit_button(f"Remove Recipient Transaction {idx + 1}")
-            if recipient_remove_button:
-                recipient_price_transaction["amount_transacted"].pop(idx)
-                recipient_price_transaction["prices"].pop(idx)
+            remove_button = col4.form_submit_button(f"Remove Transaction {idx + 1}")
+            if remove_button:
+                price_transaction["amount_transacted"].pop(idx)
+                price_transaction["prices"].pop(idx)
+                price_transaction["types"].pop(idx)
                 st.rerun()
 
-        if recipient_transaction_container.form_submit_button("Add Recipient Transaction"):
-            recipient_price_transaction["amount_transacted"].append(0)
-            recipient_price_transaction["prices"].append(0)
+        if transaction_container.form_submit_button("Add Transaction"):
+            price_transaction["amount_transacted"].append(0)
+            price_transaction["prices"].append(0)
+            price_transaction["types"].append("buy")
             st.rerun()
+        
+        st.session_state.pdf_price_transaction = price_transaction
 
-        recipient_trans_type = recipient_transaction_container.selectbox("Transaction Type:red[*]", 
-                                                 options = ["buy", "sell"], 
-                                                 format_func=format_option, 
-                                                 key="recipient_transaction_type")
-       
-        st.session_state.recipient_price_transaction = recipient_price_transaction
+        price = insider.number_input("Price*", disabled=True, key="pdf_price")
+        transaction_value = insider.number_input("Transaction Value*", disabled=True, key="pdf_trans_value")
 
-        recipient_price = insider.number_input("Price*", disabled=True, key="recipient_price")
-        recipient_transaction_value = insider.number_input("Transaction Value*", disabled=True, key="recipient_trans_value")
+        if st.session_state.share_transfer:
+            insider.markdown("### Recipient Filing Info")
+            recipient_source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="recipient_source")
+            recipient_title = insider.text_input("Title:red[*]", placeholder="Enter title", key="recipient_title")
+            recipient_body = insider.text_area("Body:red[*]", placeholder="Enter body", key="recipient_body")
+            recipient_date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), format="YYYY-MM-DD", key="recipient_date")
+            recipient_time = insider.time_input("Created Time (GMT+7)*:red[*]", key="recipient_time", step=60)
+            recipient_holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder name", key="recipient_holder_name")
+            recipient_holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="recipient_holder_type")
+            recipient_holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="recipient_holding_before", min_value=0)
+            recipient_share_percentage_before = insider.number_input("Stock Ownership Percentage before Transaction:red[*]", placeholder="Enter stock ownership percentage before transaction", key="recipient_share_percentage_before", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
+            recipient_amount_transaction = insider.number_input("Amount Transaction:red[*]", placeholder="Enter amount transaction", key="recipient_amount")
+            recipient_holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="recipient_holding_after", min_value=0)
+            recipient_share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="recipient_share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
+            recipient_subsector = insider.selectbox("Subsector:red[*]", options = AVAILABLE_SUBSECTORS, format_func=format_option, key="recipient_subsector")
+            recipient_tags = insider.text_area("Tags:red[*]", placeholder="Enter tags separated by commas, e.g. idx, market-cap", key="recipient_tags")
+            recipient_tickers = insider.text_area("Tickers:red[*]", placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="recipient_tickers")
 
-    submit = insider.form_submit_button("Submit", on_click=post)
+            recipient_price_transaction = st.session_state.get("recipient_price_transaction", {"amount_transacted": [], "prices": []})
+            if recipient_price_transaction is None:
+                recipient_price_transaction = {"amount_transacted": [], "prices": [], "types": []}
+
+            recipient_transaction_container = insider.expander("Transactions", expanded=True)
+
+            for idx, (amount, price, type) in enumerate(zip(price_transaction["amount_transacted"], price_transaction["prices"], price_transaction["types"])):
+                col1, col2, col3, col4 = recipient_transaction_container.columns([2, 2, 2], vertical_alignment="bottom")
+                
+                recipient_price_transaction["amount_transacted"][idx] = col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"recipient_amount_{idx}")
+                recipient_price_transaction["prices"][idx] = col2.number_input(f"Price {idx + 1}", value=price, key=f"recipient_price_{idx}")
+                recipient_price_transaction["types"][idx] = col3.selectbox(f"Type {idx + 1}", 
+                                                        options = ["buy", "sell"], 
+                                                        index=0 if type.lower() == "buy" else 1, 
+                                                        format_func=format_option, 
+                                                        key=f"type_{idx}")
+                
+                recipient_remove_button = col4.form_submit_button(f"Remove Recipient Transaction {idx + 1}")
+                if recipient_remove_button:
+                    recipient_price_transaction["amount_transacted"].pop(idx)
+                    recipient_price_transaction["prices"].pop(idx)
+                    recipient_price_transaction["types"].pop(idx)
+                    st.rerun()
+
+            if recipient_transaction_container.form_submit_button("Add Recipient Transaction"):
+                recipient_price_transaction["amount_transacted"].append(0)
+                recipient_price_transaction["prices"].append(0)
+                recipient_price_transaction["types"].append("buy")
+                st.rerun()
+        
+            st.session_state.recipient_price_transaction = recipient_price_transaction
+
+            recipient_price = insider.number_input("Price*", disabled=True, key="recipient_price")
+            recipient_transaction_value = insider.number_input("Transaction Value*", disabled=True, key="recipient_trans_value")
+
+        submit = insider.form_submit_button("Submit", on_click=post)
+
+if __name__ == "__main__":
+    main_ui()
