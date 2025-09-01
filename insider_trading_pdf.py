@@ -93,8 +93,6 @@ def generate():
             st.session_state.pdf_price_transaction = autogen["price_transaction"]
             st.session_state.pdf_price = autogen["price"]
             st.session_state.pdf_trans_value = autogen["transaction_value"]
-
-            st.write(f"debug transactions recipient: {st.session_state.pdf_price_transaction}")
             
             if not st.session_state.share_transfer:
                 st.session_state.pdf_view = "post"
