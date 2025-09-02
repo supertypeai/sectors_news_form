@@ -171,7 +171,7 @@ def post():
             for idx in range(len(st.session_state.recipient_price_transaction["amount_transacted"])):
                 recipient_final_t["amount_transacted"].append(st.session_state[f"amount_{idx}"])
                 recipient_final_t["prices"].append(st.session_state[f"price_{idx}"])
-                recipient_final_t['types'].append(st.session_state[f"type_{idx}"])
+                recipient_final_t['types'].append(st.session_state[f"type_recipient{idx}"])
 
             recipient_data = {
                 'UID': uid,
@@ -425,7 +425,7 @@ def main_ui():
             recipient_transaction_container = insider.expander("Transactions", expanded=True)
 
             for idx, (amount, price, type) in enumerate(zip(price_transaction["amount_transacted"], price_transaction["prices"], price_transaction["types"])):
-                col1, col2, col3, col4 = recipient_transaction_container.columns([2, 2, 2], vertical_alignment="bottom")
+                col1, col2, col3, col4 = recipient_transaction_container.columns([2, 2, 2, 2], vertical_alignment="bottom")
                 
                 recipient_price_transaction["amount_transacted"][idx] = col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"recipient_amount_{idx}")
                 recipient_price_transaction["prices"][idx] = col2.number_input(f"Price {idx + 1}", value=price, key=f"recipient_price_{idx}")
@@ -433,7 +433,7 @@ def main_ui():
                                                         options = ["buy", "sell"], 
                                                         index=0 if type.lower() == "buy" else 1, 
                                                         format_func=format_option, 
-                                                        key=f"type_{idx}")
+                                                        key=f"type_recipient{idx}")
                 
                 recipient_remove_button = col4.form_submit_button(f"Remove Recipient Transaction {idx + 1}")
                 if recipient_remove_button:
