@@ -94,8 +94,6 @@ def edit():
             st.session_state.pdf_edit_trans_value = prev_data["transaction_value"]
             st.session_state.pdf_edit_view = "view2"
 
-            st.write(f'debug: {st.session_state.pdf_edit_price_transaction}')
-
             # Check if types key exists in price_transaction
             price_transaction = prev_data["price_transaction"]
             if (price_transaction and 
@@ -361,9 +359,12 @@ def main_ui():
         )
 
         # Share percentage before form    
+        share_percentage_before = st.session_state.get("pdf_edit_share_percentage_before")
+        if share_percentage_before == 0:
+            share_percentage_before = float(share_percentage_before)
         insider.number_input(
             "Stock Ownership Percentage before Transaction:red[*]",
-            value=st.session_state.get("pdf_edit_share_percentage_before"), 
+            value=share_percentage_before, 
             placeholder="Enter stock ownership percentage before transaction",
             key="pdf_edit_share_percentage_before", min_value=0.00000,
             max_value=100.00000, 
@@ -388,9 +389,12 @@ def main_ui():
         )
         
         # Share percentage after form  
+        share_percentage_after = st.session_state.get("pdf_edit_share_percentage_after")
+        if share_percentage_after == 0:
+            share_percentage_after = float(share_percentage_after)
         insider.number_input(
             "Stock Ownership Percentage after Transaction:red[*]", 
-            value=st.session_state.get("pdf_edit_share_percentage_after"),
+            value=share_percentage_after,
             placeholder="Enter stock ownership percentage after transaction", 
             key="pdf_edit_share_percentage_after", 
             min_value=0.00000, 
