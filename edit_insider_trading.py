@@ -5,7 +5,6 @@ import streamlit as st
 import uuid
 import requests
 
-
 # Setup env
 API_KEY = st.secrets["API_KEY"]
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
@@ -47,7 +46,6 @@ AVAILABLE_SUBSECTORS = [
   "utilities"
 ]
 
-
 def fetch_data_fillings() -> list[dict]:
     supabase_client = create_client(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)
     try:
@@ -63,9 +61,6 @@ def fetch_data_fillings() -> list[dict]:
         return None
     
 DATA = fetch_data_fillings()
-
-def format_option(option):
-    return option.replace("-", " ").title()
 
 def edit():
     selected_id = st.session_state.pdf_edit_id
@@ -98,6 +93,8 @@ def edit():
             st.session_state.pdf_edit_price = prev_data["price"]
             st.session_state.pdf_edit_trans_value = prev_data["transaction_value"]
             st.session_state.pdf_edit_view = "view2"
+
+            st.write(f'debug: {st.session_state.pdf_edit_price_transaction}')
 
             # Check if types key exists in price_transaction
             price_transaction = prev_data["price_transaction"]
@@ -169,6 +166,8 @@ def post():
         headers = {
             "Authorization": f"Bearer {API_KEY}"
         }
+
+        st.write("Data to be sent for update:", data)  
         
         response = requests.patch(
             "https://sectors-news-endpoint.fly.dev/insider-trading", 
@@ -206,6 +205,9 @@ def post():
 
 def back():
     st.session_state.pdf_edit_view = "view1"
+
+def format_option(option):
+    return option.replace("-", " ").title()
 
 def generate_uid():
     return str(uuid.uuid4())
@@ -256,7 +258,8 @@ def main_ui():
         # Info notice if types were not previously set in db
         if st.session_state.get('show_type_notice', False):
             st.warning("Note: Transaction types were not previously set in db. " \
-                    "Defaulting to 'buy' for all entries. Please review and adjust as necessary, because this may affect the calculated price, transaction value, and transaction type")
+                    "Defaulting to 'buy' for all entries. " \
+                    "Please review and adjust as necessary, because this may affect the calculated price, transaction value, and transaction type")
         
         generate_uid_checkbox = st.checkbox(
             "Generate UID", 
@@ -264,45 +267,101 @@ def main_ui():
             on_change=on_generate_uid_change
         )
 
+        # Edit insider trading form
         insider = st.form('insider')
 
         insider.subheader("Edit Insider Trading")
-        back_button = insider.form_submit_button("< Back", on_click=back)
+        insider.form_submit_button("< Back", on_click=back)
         insider.caption(":red[*] _required_")
-        id = insider.text_input("ID*", value= st.session_state.get("pdf_edit_id", ""), disabled=True, key="pdf_edit_id")
+
+        # ID form
+        insider.text_input(
+            "ID*", 
+            value= st.session_state.get("pdf_edit_id", ""), 
+            disabled=True, 
+            key="pdf_edit_id"
+        )
         
         if generate_uid_checkbox:
-            uid = insider.text_input(
+            insider.text_input(
                 "UID*", 
                 value= st.session_state.get("pdf_uid", ""), 
                 disabled=True, 
                 key="pdf_uid"
             )
         else:
-            uid = insider.text_input(
+            insider.text_input(
                 "UID*", 
                 disabled=False, 
                 value= st.session_state.get("pdf_edit_uid", ""),
                 key="uuid_field_manual"
             )
 
-        source = insider.text_input("Source:red[*]", value= st.session_state.get("pdf_edit_source", ""), placeholder="Enter URL", key="pdf_edit_source")
-        title = insider.text_input("Title:red[*]", value= st.session_state.get("pdf_edit_title", ""), placeholder="Enter title", key="pdf_edit_title")
-        body = insider.text_area("Body:red[*]", value= st.session_state.get("pdf_edit_body", ""), placeholder="Enter body", key="pdf_edit_body")
-        date = insider.date_input("Created Date (GMT+7):red[*]", value= st.session_state.get("pdf_edit_date", dt.today()), max_value=dt.today(), format="YYYY-MM-DD", key="pdf_edit_date")
-        time = insider.time_input("Created Time (GMT+7)*:red[*]", value= st.session_state.get("pdf_edit_time", dt.now().time()), key="pdf_edit_time", step=60)
-        holder_name = insider.text_input("Holder Name:red[*]", value= st.session_state.get("pdf_edit_holder_name", ""), placeholder="Enter holder name", key="pdf_edit_holder_name")
-        holder_type = insider.selectbox("Holder Type:red[*]", index= ["insider", "institution"].index(st.session_state.get("pdf_edit_holder_type", "insider")), options = ["insider", "institution"], format_func=format_option, key="pdf_edit_holder_type")
+        # Source form
+        insider.text_input(
+            "Source:red[*]", 
+            value= st.session_state.get("pdf_edit_source", ""), 
+            placeholder="Enter URL", 
+            key="pdf_edit_source"
+        )
         
+        # Title form
+        insider.text_input(
+            "Title:red[*]", 
+            value= st.session_state.get("pdf_edit_title", ""), 
+            placeholder="Enter title", 
+            key="pdf_edit_title"
+        )
         
-
-        holding_before = insider.number_input("Stock Holding before Transaction:red[*]", 
-            value= st.session_state.get("pdf_edit_holding_before", 0), 
+        # Body form
+        insider.text_area(
+            "Body:red[*]", 
+            value= st.session_state.get("pdf_edit_body", ""), 
+            placeholder="Enter body", 
+            key="pdf_edit_body"
+        )
+        
+        # Created date form
+        insider.date_input(
+            "Created Date (GMT+7):red[*]", 
+            value= st.session_state.get("pdf_edit_date", dt.today()),
+            max_value=dt.today(), 
+            format="YYYY-MM-DD", 
+            key="pdf_edit_date"
+        )
+        
+        # Created time form
+        insider.time_input(
+            "Created Time (GMT+7)*:red[*]", 
+            value= st.session_state.get("pdf_edit_time", dt.now().time()), 
+            key="pdf_edit_time", step=60
+        )  
+        
+        # Holder name form
+        insider.text_input(
+            "Holder Name:red[*]", 
+            value= st.session_state.get("pdf_edit_holder_name", ""), 
+            placeholder="Enter holder name", key="pdf_edit_holder_name"
+        )
+        
+        # Holder type form
+        insider.selectbox(
+            "Holder Type:red[*]", 
+            index= ["insider", "institution"].index(st.session_state.get("pdf_edit_holder_type", "insider")), 
+            options = ["insider", "institution"], 
+            format_func=format_option, 
+            key="pdf_edit_holder_type"
+        )
+        
+        # Holding before form
+        insider.number_input("Stock Holding before Transaction:red[*]", 
+            value= st.session_state.get("pdf_edit_holding_before"), 
             placeholder="Enter stock holding before transaction", 
             key="pdf_edit_holding_before", min_value=0
         )
-    
-        share_percentage_before = insider.number_input(
+
+        # Share percentage before form    
+        insider.number_input(
             "Stock Ownership Percentage before Transaction:red[*]",
             value=st.session_state.get("pdf_edit_share_percentage_before"), 
             placeholder="Enter stock ownership percentage before transaction",
@@ -312,20 +371,24 @@ def main_ui():
             format="%.5f"
         )
         
-        amount_transaction = insider.number_input(
+        # Amount transaction form
+        insider.number_input(
             "Amount Transaction:red[*]", 
             value= st.session_state.get("pdf_edit_amount"), 
             placeholder="Enter amount transaction", 
             key="pdf_edit_amount"
         )
         
-        holding_after = insider.number_input("Stock Holding after Transaction:red[*]", 
-            value= st.session_state.get("pdf_edit_holding_after", 0), 
+        # Holding after form
+        insider.number_input(
+            "Stock Holding after Transaction:red[*]", 
+            value= st.session_state.get("pdf_edit_holding_after"), 
             placeholder="Enter stock holding after transaction", 
             key="pdf_edit_holding_after", min_value=0
         )
         
-        share_percentage_after = insider.number_input(
+        # Share percentage after form  
+        insider.number_input(
             "Stock Ownership Percentage after Transaction:red[*]", 
             value=st.session_state.get("pdf_edit_share_percentage_after"),
             placeholder="Enter stock ownership percentage after transaction", 
@@ -336,9 +399,27 @@ def main_ui():
             format="%.5f"
         )
 
-        subsector = insider.selectbox("Subsector:red[*]", index = AVAILABLE_SUBSECTORS.index(st.session_state.get("subsector", AVAILABLE_SUBSECTORS[0])), options = AVAILABLE_SUBSECTORS, format_func=format_option, key="pdf_edit_subsector")
-        tags = insider.text_area("Tags:red[*]", value=st.session_state.get("pdf_edit_tags", ""), placeholder="Enter tags separated by commas, e.g. idx, market-cap", key="pdf_edit_tags")
-        tickers = insider.text_area("Tickers:red[*]", value=st.session_state.get("pdf_edit_tickers", ""), placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="pdf_edit_tickers")
+        # Subsector form
+        insider.selectbox(
+            "Subsector:red[*]", 
+            index = AVAILABLE_SUBSECTORS.index(st.session_state.get("subsector", AVAILABLE_SUBSECTORS[0])),
+            options = AVAILABLE_SUBSECTORS, 
+            format_func=format_option, 
+            key="pdf_edit_subsector")
+        
+        # Tags form
+        insider.text_area(
+            "Tags:red[*]", 
+            value=st.session_state.get("pdf_edit_tags", ""), 
+            placeholder="Enter tags separated by commas, e.g. idx, market-cap", 
+            key="pdf_edit_tags")
+        
+        # Ticker form
+        insider.text_area(
+            "Tickers:red[*]", 
+            value=st.session_state.get("pdf_edit_tickers", ""), 
+            placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", 
+            key="pdf_edit_tickers")
 
         price_transaction = st.session_state.get("pdf_edit_price_transaction", 
                                                 {"amount_transacted": [], "prices": [], "types": []})
@@ -374,10 +455,24 @@ def main_ui():
             st.session_state.pdf_edit_price_transaction["types"].append("Buy")
             st.rerun()
 
-        price = insider.number_input("Price*", value= st.session_state.get("pdf_edit_price", 0), disabled=True, key="pdf_edit_price")
-        transaction_value = insider.number_input("Transaction Value*", value= st.session_state.get("pdf_edit_trans_value", 0), disabled=True, key="pdf_edit_trans_value")
+        # Price form
+        insider.number_input(
+            "Price*", 
+            value= st.session_state.get("pdf_edit_price", 0), 
+            disabled=True, 
+            key="pdf_edit_price"
+        )
+        
+        # Transaction value form
+        insider.number_input(
+            "Transaction Value*", 
+            value= st.session_state.get("pdf_edit_trans_value", 0), 
+            disabled=True, 
+            key="pdf_edit_trans_value"
+        )
 
-        submit = insider.form_submit_button("Submit", on_click=post)
+        # Submit button to update the data form
+        insider.form_submit_button("Submit", on_click=post)
 
 if __name__ == "__main__":
     main_ui()

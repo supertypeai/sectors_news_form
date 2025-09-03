@@ -4,7 +4,6 @@ import streamlit as st
 import requests
 import uuid 
 
-
 # data
 API_KEY = st.secrets["API_KEY"]
 
@@ -44,7 +43,6 @@ AVAILABLE_SUBSECTORS = [
   "utilities"
 ]
 
-
 # helper functions
 def format_option(option):
     return option.replace("-", " ").title()
@@ -57,7 +55,13 @@ def post():
         manual_uid = st.session_state.get("uuid_field_manual", "")
         final_uuid = manual_uid if manual_uid else None
 
-    if not st.session_state.source or not st.session_state.date or not st.session_state.time or not st.session_state.doc_number or not st.session_state.company_name or not st.session_state.holder_name or not st.session_state.subsector or not st.session_state.ticker or not st.session_state.purpose or not st.session_state.holder_type or not st.session_state.price_transaction: # or not st.session_state.transaction_type:
+    required_fields = [
+        "source", "date", "time", "doc_number", "company_name",
+        "holder_name", "subsector", "ticker", "purpose",
+        "holder_type", "price_transaction"  # "transaction_type"
+    ]
+
+    if any(not st.session_state.get(field) for field in required_fields):
         st.toast("Please fill out the required fields.")
     else:
         final_transaction= {"amount_transacted": [], "prices": [], "types": []}
@@ -86,6 +90,8 @@ def post():
             "price_transaction": final_transaction
         }
 
+        st.write(data)
+
         headers = {
             "Authorization": f"Bearer {API_KEY}"
         }
@@ -110,11 +116,7 @@ def post():
             st.session_state.date = dt.today()
             st.session_state.time = dt.now()
             st.session_state.transaction_type = "buy" 
-            st.session_state.price_transaction = {
-                "amount_transacted": [],
-                "prices": [], 
-                "types": []
-            }
+            st.session_state.price_transaction = None
         else:
             # Handle error
             st.error(f"Error: Something went wrong. Please try again.")
@@ -152,20 +154,21 @@ def main_ui():
     if "prices" not in price_transaction:
         price_transaction["prices"] = []
 
-    # Form for insider trading input
+    # Chechbox to generate uid
     checkbox_uuid = st.checkbox("Generate UUID", 
                                 key="generate_uuid", 
                                 on_change=uuid_on_change)
 
+    # Form for insider trading input
     insider = st.form('insider')
 
     insider.subheader("Add Insider Trading (Non-IDX Format)")
     insider.caption(":red[*] _required_")
     
-    source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="source")
+    insider.text_input("Source:red[*]", placeholder="Enter URL", key="source")
 
     if checkbox_uuid:
-        uuid_field = insider.text_input("UUID", 
+        insider.text_input("UUID", 
             value=st.session_state.uuid, 
             key="uuid_field",
             disabled=True,
@@ -173,26 +176,110 @@ def main_ui():
         )
     else:
         # Manual entry mode
-        uuid_field = insider.text_input("UUID", 
+        insider.text_input("UUID", 
             placeholder="Enter UUID manually", 
             key="uuid_field_manual",
             help="Enter UUID manually"
         )
 
-    date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), format="YYYY-MM-DD", key="date")
-    time = insider.time_input("Created Time (GMT+7)*:red[*]", key="time", step=60)
-    doc_number = insider.text_input("Document Number:red[*]", placeholder="Enter document number", key="doc_number")
-    company_name = insider.text_input("Company Name:red[*]", placeholder="Enter company name", key="company_name")
-    holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder name", key="holder_name")
-    subsector = insider.selectbox("Subsector:red[*]", options = AVAILABLE_SUBSECTORS, format_func=format_option, key="subsector")
-    ticker = insider.text_input("Ticker:red[*]", placeholder="Enter ticker", key="ticker")
-    holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="holding_before", min_value=0)
-    share_percentage_before = insider.number_input("Stock Ownership Percentage before Transaction:red[*]", placeholder="Enter stock ownership percentage before transaction", key="share_percentage_before", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
-    holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="holding_after", min_value=0)
-    share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
-    purpose = insider.text_input("Transaction Purpose:red[*]", placeholder="Enter transaction purpose", key="purpose")
-    holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="holder_type")
-
+    # Date form
+    insider.date_input(
+        "Created Date (GMT+7):red[*]", 
+        max_value=dt.today(), 
+        format="YYYY-MM-DD",
+        key="date"
+    )
+    
+    # Created date form
+    insider.time_input(
+        "Created Time (GMT+7)*:red[*]", 
+        key="time", 
+        step=60
+    )
+    
+    # Document number
+    insider.text_input(
+        "Document Number:red[*]", 
+        placeholder="Enter document number", 
+        key="doc_number"
+    )
+    
+    # Company name form
+    insider.text_input(
+        "Company Name:red[*]", 
+        placeholder="Enter company name", 
+        key="company_name"
+    )
+    
+    # Holder name form
+    insider.text_input(
+        "Holder Name:red[*]", 
+        placeholder="Enter holder name", 
+        key="holder_name"
+    )
+    
+    # Subsector form
+    insider.selectbox(
+        "Subsector:red[*]", 
+        options = AVAILABLE_SUBSECTORS, 
+        format_func=format_option, 
+        key="subsector"
+    )
+    
+    # Ticker form
+    insider.text_input(
+        "Ticker:red[*]", 
+        placeholder="Enter ticker", 
+        key="ticker"
+    )
+    
+    # Holding before form
+    insider.number_input(
+        "Stock Holding before Transaction:red[*]", 
+        placeholder="Enter stock holding before transaction", 
+        key="holding_before", 
+        min_value=0
+    )
+    
+    # Holding after form
+    insider.number_input(
+        "Stock Holding after Transaction:red[*]", 
+        placeholder="Enter stock holding after transaction", 
+        key="holding_after", min_value=0
+    )
+    
+    # Share percentage before form
+    insider.number_input(
+        "Stock Ownership Percentage before Transaction:red[*]", 
+        placeholder="Enter stock ownership percentage before transaction", 
+        key="share_percentage_before", 
+        min_value=0.00000, max_value=100.00000, 
+        step=0.00001, format="%.5f"
+    )
+    
+    # Share percentage after form
+    insider.number_input(
+        "Stock Ownership Percentage after Transaction:red[*]", 
+        placeholder="Enter stock ownership percentage after transaction", 
+        key="share_percentage_after", 
+        min_value=0.00000, max_value=100.00000, 
+        step=0.00001, format="%.5f"
+    )
+    
+    # Transaction purpose form
+    insider.text_input(
+        "Transaction Purpose:red[*]", 
+        placeholder="Enter transaction purpose", 
+        key="purpose"
+    )
+    
+    # Holder type form
+    insider.selectbox(
+        "Holder Type:red[*]", 
+        options = ["insider", "institution"], 
+        format_func=format_option, 
+        key="holder_type"
+    )
 
     transaction_container = insider.expander("Transactions", expanded=True)
 
@@ -222,7 +309,8 @@ def main_ui():
 
     st.session_state.price_transaction = price_transaction
 
-    submit = insider.form_submit_button("Submit", on_click=post)
+    # Submit button to indert the data
+    insider.form_submit_button("Submit", on_click=post)
 
 if __name__ == "__main__":
     main_ui()
