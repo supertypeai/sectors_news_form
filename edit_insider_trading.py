@@ -196,7 +196,7 @@ def post():
             st.session_state.pdf_edit_trans_value = ""
         else:
             # Handle error
-            st.write("Response content:", response.text) 
+            st.write("Response content:", response.json()) 
             st.error(f"Error: Something went wrong. Please try again.")
 
 def back():

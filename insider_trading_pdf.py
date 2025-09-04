@@ -278,6 +278,7 @@ def post():
 
         else:
             # Handle error
+            st.error(f"{res.json()}")
             st.error(f"Error: Something went wrong. Please try again.")
         
         if st.session_state.share_transfer and res_recipient.status_code == 200:
@@ -308,6 +309,7 @@ def post():
 
         elif st.session_state.share_transfer and res_recipient.status_code != 200:
             # Handle error
+            st.error(f"{res.json()}")
             st.error(f"Error: Something went wrong. Please try again.")
 
 def back():
