@@ -1,4 +1,5 @@
 from datetime import datetime as dt
+from supabase import create_client
 
 import streamlit as st
 import requests
@@ -43,10 +44,6 @@ AVAILABLE_SUBSECTORS = [
   "utilities"
 ]
 
-# helper functions
-def format_option(option):
-    return option.replace("-", " ").title()
-
 def post():
     final_uuid = ""
     if st.session_state.uuid:
@@ -57,7 +54,7 @@ def post():
 
     required_fields = [
         "source", "date", "time", "doc_number", "company_name",
-        "holder_name", "subsector", "ticker", "purpose",
+        "holder_name", "ticker", "purpose",
         "holder_type", "price_transaction"  # "transaction_type"
     ]
 
@@ -90,8 +87,6 @@ def post():
             "price_transaction": final_transaction
         }
 
-        st.write(data)
-
         headers = {
             "Authorization": f"Bearer {API_KEY}"
         }
@@ -117,8 +112,9 @@ def post():
             st.session_state.time = dt.now()
             st.session_state.transaction_type = "buy" 
             st.session_state.price_transaction = None
-        else:
+        else:   
             # Handle error
+            st.write(response.json())
             st.error(f"Error: Something went wrong. Please try again.")
 
 def uuid_on_change():
@@ -126,6 +122,9 @@ def uuid_on_change():
         st.session_state.uuid = str(uuid.uuid4())  
     else:
         st.session_state.uuid = ""
+
+def format_option(option):
+    return option.replace("-", " ").title()
 
 # app
 def main_ui():
@@ -218,14 +217,6 @@ def main_ui():
         key="holder_name"
     )
     
-    # Subsector form
-    insider.selectbox(
-        "Subsector:red[*]", 
-        options = AVAILABLE_SUBSECTORS, 
-        format_func=format_option, 
-        key="subsector"
-    )
-    
     # Ticker form
     insider.text_input(
         "Ticker:red[*]", 
@@ -233,6 +224,17 @@ def main_ui():
         key="ticker"
     )
     
+    # Subsector form
+    insider.text_input(
+        "Subsector:red[*]", 
+        # options = AVAILABLE_SUBSECTORS, 
+        # format_func=format_option, 
+        # key="subsector"
+        placeholder="Filled automatically based on ticker",
+        disabled=True,
+        key='subsector'
+    )
+
     # Holding before form
     insider.number_input(
         "Stock Holding before Transaction:red[*]", 
