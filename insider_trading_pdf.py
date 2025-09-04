@@ -4,7 +4,6 @@ import streamlit as st
 import requests
 import uuid
 
-
 # data
 API_KEY = st.secrets["API_KEY"]
 
@@ -44,11 +43,6 @@ AVAILABLE_SUBSECTORS = [
   "utilities"
 ]
 
-
-# helper functions
-def format_option(option):
-    return option.replace("-", " ").title()
-
 def generate():
     if (not st.session_state.pdf_source or not st.session_state.file) or (st.session_state.share_transfer and (not st.session_state.recipient_source or not st.session_state.recipient_file)):
         st.toast("Please fill out the required fields.")
@@ -75,8 +69,18 @@ def generate():
 
         if response.status_code == 200:
             autogen = response.json()
+
+            # Handle if type in price transaction is empty
+            st.session_state.show_type_notice = False
+            price_transaction = autogen["price_transaction"]
+            if "types" not in price_transaction or not price_transaction["types"]:
+                num_transactions = len(price_transaction.get("prices", []))
+                price_transaction["types"] = ["buy"] * num_transactions
+                st.session_state.show_type_notice = True
+
             timestamp = dt.strptime(autogen["timestamp"], "%Y-%m-%d %H:%M:%S")
             st.session_state.pdf_source=autogen["source"]
+            st.session_state.pdf_subsector=autogen["sub_sector"]
             st.session_state.pdf_title=autogen["title"]
             st.session_state.pdf_body=autogen["body"]
             st.session_state.pdf_date=timestamp.date()
@@ -88,7 +92,8 @@ def generate():
             st.session_state.pdf_transaction_type=autogen["transaction_type"]
             st.session_state.pdf_holding_after=autogen["holding_after"]
             st.session_state.pdf_share_percentage_after=autogen["share_percentage_after"]
-            st.session_state.pdf_tags=', '.join(autogen["tags"])
+            # st.session_state.pdf_tags=', '.join(autogen["tags"])
+            st.session_state.pdf_tags=""
             st.session_state.pdf_tickers=', '.join(autogen["tickers"])
             st.session_state.pdf_price_transaction = autogen["price_transaction"]
             st.session_state.pdf_price = autogen["price"]
@@ -102,6 +107,14 @@ def generate():
 
         if st.session_state.share_transfer and response_recipient.status_code == 200:
             autogen_recipient = response_recipient.json()
+
+            st.session_state.show_type_notice_recipient = False
+            price_transaction_recipient = autogen_recipient["price_transaction"]
+            if "types" not in price_transaction_recipient or not price_transaction_recipient["types"]:
+                num_transactions = len(price_transaction_recipient.get("prices", []))
+                price_transaction_recipient["types"] = ["buy"] * num_transactions
+                st.session_state.show_type_notice = True
+            
             timestamp_recipient = dt.strptime(autogen_recipient["timestamp"], "%Y-%m-%d %H:%M:%S")
             st.session_state.recipient_source=autogen_recipient["source"]
             st.session_state.recipient_title=autogen_recipient["title"]
@@ -115,7 +128,9 @@ def generate():
             st.session_state.recipient_transaction_type=autogen_recipient["transaction_type"]
             st.session_state.recipient_holding_after=autogen_recipient["holding_after"]
             st.session_state.recipient_share_percentage_after=autogen_recipient["share_percentage_after"]
-            st.session_state.recipient_tags=', '.join(autogen_recipient["tags"])
+            # st.session_state.recipient_tags=', '.join(autogen_recipient["tags"])
+            st.session_state.recipient_tags=""
+            st.session_state.recipient_subsector=autogen_recipient["sub_sector"]
             st.session_state.recipient_tickers=', '.join(autogen_recipient["tickers"])
             st.session_state.recipient_price_transaction = autogen_recipient["price_transaction"]
             st.session_state.recipient_price = autogen_recipient["price"]
@@ -127,10 +142,30 @@ def generate():
             st.error(f"Error: Something went wrong with the recipient data. Please try again.")
 
 def post():
-    if (not st.session_state.pdf_source or not st.session_state.pdf_title or not st.session_state.pdf_body or not st.session_state.pdf_date or not st.session_state.pdf_time or not st.session_state.pdf_holder_name or not st.session_state.pdf_holder_type or not st.session_state.pdf_transaction_type or not st.session_state.pdf_subsector or not st.session_state.pdf_tags or not st.session_state.pdf_tickers or not st.session_state.pdf_price_transaction) or (st.session_state.share_transfer and (not st.session_state.recipient_source or not st.session_state.recipient_title or not st.session_state.recipient_body or not st.session_state.recipient_date or not st.session_state.recipient_time or not st.session_state.recipient_holder_name or not st.session_state.recipient_holder_type or not st.session_state.recipient_transaction_type or not st.session_state.recipient_subsector or not st.session_state.recipient_tags or not st.session_state.recipient_tickers or not st.session_state.recipient_price_transaction)):
+    pdf_required_fields = [
+        "pdf_source", "pdf_title", "pdf_body", "pdf_date", "pdf_time",
+        "pdf_holder_name", "pdf_holder_type", "pdf_transaction_type",
+        "pdf_subsector", "pdf_tickers", "pdf_price_transaction"
+    ]
+
+    recipient_required_fields = [
+        "recipient_source", "recipient_title", "recipient_body", "recipient_date", "recipient_time",
+        "recipient_holder_name", "recipient_holder_type", "recipient_transaction_type",
+        "recipient_subsector", "recipient_tickers", "recipient_price_transaction"
+    ]
+
+    # Validation
+    missing_pdf = not all(st.session_state.get(field) for field in pdf_required_fields)
+    missing_recipient = (
+        st.session_state.get("share_transfer")
+        and not all(st.session_state.get(field) for field in recipient_required_fields)
+    )
+
+    if missing_pdf or missing_recipient:
         st.toast("Please fill out the required fields.")
+
     else:
-        tags_list = [tag.strip() for tag in st.session_state.pdf_tags.split(',') if tag.strip()]
+        # tags_list = [tag.strip() for tag in st.session_state.pdf_tags.split(',') if tag.strip()]
         tickers_list = [ticker.strip() for ticker in st.session_state.pdf_tickers.split(',') if ticker.strip()]
         
         final_transaction = {"amount_transacted": [], "prices": [], "types": []}
@@ -139,6 +174,11 @@ def post():
             final_transaction["amount_transacted"].append(st.session_state[f"amount_{idx}"])
             final_transaction["prices"].append(st.session_state[f"price_{idx}"])
             final_transaction['types'].append(st.session_state[f"type_{idx}"])
+
+        if st.session_state.share_transfer:
+            flag_share_transfer = st.session_state.share_transfer
+        else: 
+            flag_share_transfer = None
 
         data = {
             'source': st.session_state.pdf_source,
@@ -154,9 +194,10 @@ def post():
             'holding_after': st.session_state.pdf_holding_after,
             'share_percentage_after': st.session_state.pdf_share_percentage_after,
             'sub_sector': st.session_state.pdf_subsector,
-            'tags': tags_list,
+            'tags': st.session_state.pdf_tags,
             'tickers': tickers_list,
             'price_transaction': final_transaction,
+            "share_transfer":flag_share_transfer
         }
 
         if st.session_state.share_transfer:
@@ -191,6 +232,8 @@ def post():
                 'tags': recipient_tags_list,
                 'tickers': recipient_tickers_list,
                 'price_transaction': recipient_final_t,
+                # Flag for the backend
+                'share_transfer_recipient': st.session_state.share_transfer
             }
         
         else:
@@ -204,7 +247,7 @@ def post():
         res = requests.post("https://sectors-news-endpoint.fly.dev/pdf/post", headers = headers, json=data)
         if st.session_state.share_transfer:
             res_recipient = requests.post("https://sectors-news-endpoint.fly.dev/pdf/post", headers = headers, json=recipient_data)
-
+        
         if res.status_code == 200:
             st.session_state.pdf_source=""
             st.session_state.pdf_title=""
@@ -282,6 +325,10 @@ def on_generate_uid_change():
         # Clear UID when checkbox is unchecked
         st.session_state.pdf_uid = ""
 
+# helper functions
+def format_option(option):
+    return option.replace("-", " ").title()
+
 def main_ui():
     # app
     if 'pdf_view' not in st.session_state:
@@ -340,15 +387,21 @@ def main_ui():
         submit = insider.form_submit_button("Submit", on_click=generate)
 
     elif st.session_state.pdf_view == "post":
+        if st.session_state.show_type_notice:
+            st.warning('The document have no type (buy/sell) in price transactions.' \
+                        ' Please adjust as needed')
+
         is_share_transfer = st.checkbox("Share Transfer", key="share_transfer", disabled=True)
         if not st.session_state.share_transfer:
             generate_uid_checkbox = st.checkbox("Generate UID", key="generate_uuid", disabled=True)
         
+        # Forms
         insider = st.form('insider')
 
         insider.subheader("Add Insider Trading (IDX Format)")
-        back_button = insider.form_submit_button("< Back", on_click=back)
+        insider.form_submit_button("< Back", on_click=back)
         insider.caption(":red[*] _required_")
+
         source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="pdf_source")
         title = insider.text_input("Title:red[*]", placeholder="Enter title", key="pdf_title")
         body = insider.text_area("Body:red[*]", placeholder="Enter body", key="pdf_body")
@@ -361,9 +414,27 @@ def main_ui():
         amount_transaction = insider.number_input("Amount Transaction:red[*]", placeholder="Enter amount transaction", key="pdf_amount")
         holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="pdf_holding_after", min_value=0)
         share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="pdf_share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
-        subsector = insider.selectbox("Subsector:red[*]", options = AVAILABLE_SUBSECTORS, format_func=format_option, key="pdf_subsector")
-        tags = insider.text_area("Tags:red[*]", placeholder="Enter tags separated by commas, e.g. idx, market-cap", key="pdf_tags")
-        tickers = insider.text_area("Tickers:red[*]", placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="pdf_tickers")
+        
+        # Subsector
+        insider.selectbox(
+            "Subsector:red[*]", 
+            options = AVAILABLE_SUBSECTORS, 
+            format_func=format_option, 
+            index = AVAILABLE_SUBSECTORS.index(st.session_state.pdf_subsector),
+            key="pdf_subsector"
+        )
+        
+        # Tags
+        insider.text_area("Tags:red[*]", 
+                                 placeholder="Filled automatically",
+                                 disabled=True,
+                                 key="pdf_tags")
+        
+        # Tickers
+        insider.text_area(
+            "Tickers:red[*]", 
+            placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", 
+            key="pdf_tickers")
         
         price_transaction = st.session_state.get("pdf_price_transaction", {"amount_transacted": [], "prices": []})
         if price_transaction is None:
@@ -397,8 +468,11 @@ def main_ui():
         
         st.session_state.pdf_price_transaction = price_transaction
 
-        price = insider.number_input("Price*", disabled=True, key="pdf_price")
-        transaction_value = insider.number_input("Transaction Value*", disabled=True, key="pdf_trans_value")
+        # Price pdf
+        insider.number_input("Price*", disabled=True, key="pdf_price")
+        
+        # Transaction pdf
+        insider.number_input("Transaction Value*", disabled=True, key="pdf_trans_value")
 
         if st.session_state.share_transfer:
             insider.markdown("### Recipient Filing Info")
@@ -414,9 +488,28 @@ def main_ui():
             recipient_amount_transaction = insider.number_input("Amount Transaction:red[*]", placeholder="Enter amount transaction", key="recipient_amount")
             recipient_holding_after = insider.number_input("Stock Holding after Transaction:red[*]", placeholder="Enter stock holding after transaction", key="recipient_holding_after", min_value=0)
             recipient_share_percentage_after = insider.number_input("Stock Ownership Percentage after Transaction:red[*]", placeholder="Enter stock ownership percentage after transaction", key="recipient_share_percentage_after", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
-            recipient_subsector = insider.selectbox("Subsector:red[*]", options = AVAILABLE_SUBSECTORS, format_func=format_option, key="recipient_subsector")
-            recipient_tags = insider.text_area("Tags:red[*]", placeholder="Enter tags separated by commas, e.g. idx, market-cap", key="recipient_tags")
-            recipient_tickers = insider.text_area("Tickers:red[*]", placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", key="recipient_tickers")
+            
+            # Subsector
+            insider.selectbox(
+                "Subsector:red[*]", 
+                options = AVAILABLE_SUBSECTORS, 
+                format_func=format_option, 
+                index=AVAILABLE_SUBSECTORS.index(st.session_state.recipient_subsector),
+                key="recipient_subsector")
+            
+            # Tags
+            insider.text_area(
+                "Tags:red[*]", 
+                placeholder="Filled automatically", 
+                disabled=True,
+                key="recipient_tags")
+            
+            # Tickers
+            insider.text_area(
+                "Tickers:red[*]",
+                  placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK",
+                  key="recipient_tickers"
+                )
 
             recipient_price_transaction = st.session_state.get("recipient_price_transaction", {"amount_transacted": [], "prices": []})
             if recipient_price_transaction is None:
@@ -450,10 +543,14 @@ def main_ui():
         
             st.session_state.recipient_price_transaction = recipient_price_transaction
 
-            recipient_price = insider.number_input("Price*", disabled=True, key="recipient_price")
-            recipient_transaction_value = insider.number_input("Transaction Value*", disabled=True, key="recipient_trans_value")
+            # Price recipient
+            insider.number_input("Price*", disabled=True, key="recipient_price")
+            
+            #Transaction value recipient
+            insider.number_input("Transaction Value*", disabled=True, key="recipient_trans_value")
 
-        submit = insider.form_submit_button("Submit", on_click=post)
+        # Submit button
+        insider.form_submit_button("Submit", on_click=post)
 
 if __name__ == "__main__":
     main_ui()
