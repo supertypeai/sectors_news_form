@@ -111,7 +111,12 @@ def post():
             st.session_state.date = dt.today()
             st.session_state.time = dt.now()
             st.session_state.transaction_type = "buy" 
-            st.session_state.price_transaction = None
+            st.session_state.price_transaction = {
+                "amount_transacted": [],
+                "prices": [], 
+                "types": []
+            }
+            
         else:   
             # Handle error
             st.write(response.json())

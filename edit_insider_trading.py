@@ -164,8 +164,6 @@ def post():
         headers = {
             "Authorization": f"Bearer {API_KEY}"
         }
-
-        st.write("Data to be sent for update:", data)  
         
         response = requests.patch(
             "https://sectors-news-endpoint.fly.dev/insider-trading", 
