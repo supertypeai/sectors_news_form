@@ -68,7 +68,7 @@ def main_ui_pair(post: Callable):
             if success_1 and success_2:
                 st.success("✅ Both filings submitted successfully!")
                 reset_pair_forms()
-                time.sleep(1.5)
+                time.sleep(3.5)
                 st.rerun()
 
 
@@ -87,7 +87,7 @@ def render_single_form(form_number: int):
             "dates": []
         }
 
-    # NO st.form() wrapper!
+    # NO st.form() wrapper
     st.caption(":red[*] _required_")
     
     # All fields with unique keys - use st.xxx directly instead of insider.xxx
@@ -209,7 +209,7 @@ def render_single_form(form_number: int):
         )
         c3.selectbox(
             f"Type {idx + 1}",
-            options=["buy", "sell"], 
+            options=["buy", "sell", 'other'], 
             index=0 if price_transaction["types"][idx] == "buy" else 1, 
             format_func=format_option,
             key=f"types{suffix}_{idx}"

@@ -197,7 +197,7 @@ def main_ui_single(post: Callable):
         )
         price_transaction["types"][idx] = col3.selectbox(
             f"Type {idx + 1}",
-            options=["buy", "sell"], 
+            options=["buy", "sell", 'other'], 
             index=0 if type == "buy" else 1, 
             format_func=format_option,
             key=f"types_{idx}"
