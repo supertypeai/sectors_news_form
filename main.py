@@ -7,6 +7,7 @@ pages = {
         st.Page("delete_news.py", title="Delete News", icon="❗"),
         st.Page("insider_trading_pdf.py", title="Add Insider Trading (IDX Format)", icon="📂"),
         st.Page("insider_trading.py", title="Add Insider Trading (Non-IDX Format)", icon="✒️"),
+        st.Page("add_sgx_filing.py", title="Add SGX Filing", icon="📤"),
         st.Page("edit_insider_trading.py", title="Edit Insider Trading", icon="🖊️"),
         st.Page("delete_insider_trading.py", title="Delete Insider Trading", icon="❕")
     ]
