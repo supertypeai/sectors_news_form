@@ -50,8 +50,12 @@ def post(form_number: int = None):
         final_transaction["amount_transacted"].append(st.session_state[f"amount{suffix}_{index}"])
         final_transaction["prices"].append(st.session_state[f"price{suffix}_{index}"])
         final_transaction['types'].append(st.session_state[f"types{suffix}_{index}"])
-        final_transaction['dates'].append(st.session_state[f'date{suffix}_{index}'])
-
+        # final_transaction['dates'].append(st.session_state[f'date{suffix}_{index}'])
+        date_value = st.session_state[f'date{suffix}_{index}']
+        final_transaction['dates'].append(
+                    date_value.strftime("%Y-%m-%d") if hasattr(date_value, 'strftime') else str(date_value)
+                )
+        
     data = {
         "document_number": st.session_state.get(f"doc_number{suffix}"),
         "company_name": st.session_state.get(f"company_name{suffix}"),
@@ -74,8 +78,11 @@ def post(form_number: int = None):
         "price_transaction": final_transaction,
     }
     
-    # st.write(f'data to be inserted: {data}')
     try:
+        # Log data being sent
+        with st.expander("🔍 Debug - Request Data"):
+            st.json(data)
+
         headers = {
             "Authorization": f"Bearer {API_KEY}"
         }
@@ -92,14 +99,20 @@ def post(form_number: int = None):
             return True
         else:
             # Handle non-200 responses
-            error_msg = f"API returned status {response.status_code}"
-            try:
-                error_detail = response.json()
-                error_msg += f": {error_detail}"
-            except:
-                error_msg += f": {response.text}"
+            st.error(f"❌ API Error {response.status_code} for Filing #{form_number if form_number else ''}")
             
-            st.error(f"Error submitting Filing #{form_number if form_number else ''}: {error_msg}")
+            with st.expander(f"🔍 Error Details (Filing #{form_number if form_number else ''})"):
+                st.write("**Status Code:**", response.status_code)
+                st.write("**Response Headers:**", dict(response.headers))
+                
+                try:
+                    error_json = response.json()
+                    st.write("**Error Response (JSON):**")
+                    st.json(error_json)
+                except:
+                    st.write("**Error Response (Text):**")
+                    st.code(response.text)
+            
             return False
         
     except Exception as error:

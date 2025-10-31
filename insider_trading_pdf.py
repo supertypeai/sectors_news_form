@@ -281,77 +281,111 @@ def post():
             data['tags'] = 'share_transfer'
             recipient_data['tags'] = 'share_transfer'
 
-        res = requests.post(
-            "https://sectors-news-endpoint.fly.dev/pdf/post", 
-            headers = headers, json=data
-        )
-        if st.session_state.share_transfer:
-            res_recipient = requests.post(
+        try:
+            # Log data being sent
+            with st.expander("🔍 Debug - Request Data"):
+                st.json(data)
+            
+            res = requests.post(
                 "https://sectors-news-endpoint.fly.dev/pdf/post", 
-                headers = headers, json=recipient_data
+                headers=headers, 
+                json=data,
+                timeout=30
             )
-
-        if res.status_code == 200:
-            st.session_state.pdf_source=""
-            st.session_state.pdf_title=""
-            st.session_state.pdf_body=""
-            st.session_state.pdf_date=dt.today()
-            st.session_state.pdf_time=dt.now()
-            st.session_state.pdf_holder_name=""
-            st.session_state.pdf_holder_type="insider"
-            st.session_state.pdf_holding_before=0
-            st.session_state.pdf_share_percentage_before=0
-            st.session_state.pdf_amount=0
-            st.session_state.pdf_transaction_type="buy"
-            st.session_state.pdf_holding_after=0
-            st.session_state.pdf_share_percentage_after=0
-            st.session_state.pdf_subsector=AVAILABLE_SUBSECTORS[0]
-            st.session_state.pdf_tags=""
-            st.session_state.pdf_tickers=""
-            st.session_state.pdf_price_transaction = None
-            st.session_state.pdf_price = ""
-            st.session_state.pdf_trans_value = ""
-
-            st.session_state.pdf_uid = ""
-            st.session_state.generate_uid = False
-
-            if not st.session_state.share_transfer:
-                st.toast("Insider trading submitted successfully! 🎉")
-                st.session_state.pdf_view = "file"
-
-        else:
-            # Handle error
-            st.error(f"Error: Something went wrong. Please try again.")
-        
-        if st.session_state.share_transfer and res_recipient.status_code == 200:
-            st.session_state.recipient_source=""
-            st.session_state.recipient_title=""
-            st.session_state.recipient_body=""
-            st.session_state.recipient_date=dt.today()
-            st.session_state.recipient_time=dt.now()
-            st.session_state.recipient_holder_name=""
-            st.session_state.recipient_holder_type="insider"
-            st.session_state.recipient_holding_before=0
-            st.session_state.recipient_share_percentage_before=0
-            st.session_state.recipient_amount=0
-            st.session_state.recipient_transaction_type="buy"
-            st.session_state.recipient_holding_after=0
-            st.session_state.recipient_share_percentage_after=0
-            st.session_state.recipient_subsector=AVAILABLE_SUBSECTORS[0]
-            st.session_state.recipient_tags=""
-            st.session_state.recipient_tickers=""
-            st.session_state.recipient_price_transaction = None
-            st.session_state.recipient_price = ""
-            st.session_state.recipient_trans_value = ""
+            
+            st.write(f"Primary request status: {res.status_code}")
+            
+            if st.session_state.share_transfer:
+                with st.expander("🔍 Debug - Recipient Request Data"):
+                    st.json(recipient_data)
+                    
+                res_recipient = requests.post(
+                    "https://sectors-news-endpoint.fly.dev/pdf/post", 
+                    headers=headers, 
+                    json=recipient_data,
+                    timeout=30
+                )
+                st.write(f"Recipient request status: {res_recipient.status_code}")
 
             if res.status_code == 200:
-                st.toast("Insider trading submitted successfully! 🎉")
-                st.session_state.pdf_view = "file"
-                st.session_state.share_transfer = False
+                st.session_state.pdf_source=""
+                st.session_state.pdf_title=""
+                st.session_state.pdf_body=""
+                st.session_state.pdf_date=dt.today()
+                st.session_state.pdf_time=dt.now()
+                st.session_state.pdf_holder_name=""
+                st.session_state.pdf_holder_type="insider"
+                st.session_state.pdf_holding_before=0
+                st.session_state.pdf_share_percentage_before=0
+                st.session_state.pdf_amount=0
+                st.session_state.pdf_transaction_type="buy"
+                st.session_state.pdf_holding_after=0
+                st.session_state.pdf_share_percentage_after=0
+                st.session_state.pdf_subsector=AVAILABLE_SUBSECTORS[0]
+                st.session_state.pdf_tags=""
+                st.session_state.pdf_tickers=""
+                st.session_state.pdf_price_transaction = None
+                st.session_state.pdf_price = ""
+                st.session_state.pdf_trans_value = ""
 
-        elif st.session_state.share_transfer and res_recipient.status_code != 200:
-            # Handle error
-            st.error(f"Error: Something went wrong. Please try again.")
+                st.session_state.pdf_uid = ""
+                st.session_state.generate_uid = False
+
+                if not st.session_state.share_transfer:
+                    st.toast("Insider trading submitted successfully! 🎉")
+                    st.session_state.pdf_view = "file"
+            else:
+                # Detailed error for main request
+                st.error(f"❌ API Error {res.status_code}")
+                st.write("**Response:**")
+                try:
+                    st.json(res.json())
+                except:
+                    st.code(res.text)
+            
+            if st.session_state.share_transfer and res_recipient.status_code == 200:
+                st.session_state.recipient_source=""
+                st.session_state.recipient_title=""
+                st.session_state.recipient_body=""
+                st.session_state.recipient_date=dt.today()
+                st.session_state.recipient_time=dt.now()
+                st.session_state.recipient_holder_name=""
+                st.session_state.recipient_holder_type="insider"
+                st.session_state.recipient_holding_before=0
+                st.session_state.recipient_share_percentage_before=0
+                st.session_state.recipient_amount=0
+                st.session_state.recipient_transaction_type="buy"
+                st.session_state.recipient_holding_after=0
+                st.session_state.recipient_share_percentage_after=0
+                st.session_state.recipient_subsector=AVAILABLE_SUBSECTORS[0]
+                st.session_state.recipient_tags=""
+                st.session_state.recipient_tickers=""
+                st.session_state.recipient_price_transaction = None
+                st.session_state.recipient_price = ""
+                st.session_state.recipient_trans_value = ""
+
+                if res.status_code == 200:
+                    st.toast("Insider trading submitted successfully! 🎉")
+                    st.session_state.pdf_view = "file"
+                    st.session_state.share_transfer = False
+            
+            elif st.session_state.share_transfer and res_recipient.status_code != 200:
+                st.error(f"❌ Recipient API Error {res_recipient.status_code}")
+                st.write("**Response:**")
+                try:
+                    st.json(res_recipient.json())
+                except:
+                    st.code(res_recipient.text)
+
+        except requests.exceptions.Timeout:
+            st.error("⏱️ Request timed out. Please try again.")
+        except requests.exceptions.RequestException as error:
+            st.error(f"🌐 Network error: {str(error)}")
+        except Exception as error:
+            st.error(f"💥 Unexpected error: {str(error)}")
+            import traceback
+            st.code(traceback.format_exc())
+
 
 def back():
     st.session_state.pdf_view = "file"
