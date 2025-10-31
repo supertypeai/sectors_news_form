@@ -3,6 +3,7 @@ from datetime import datetime as dt, date
 import streamlit as st
 import requests
 import uuid
+import traceback
 
 # from generate_article import generate_article_filings, extract_from_pdf
 # from edit_insider_trading_function import insert_insider_trading_supabase
@@ -66,14 +67,12 @@ def generate():
         files = {
             'file': (st.session_state.file.name, st.session_state.file, 'application/pdf'),
             'source': (None, st.session_state.pdf_source, 'text/plain'),
-            'purpose': (None, st.session_state.pdf_purpose, 'text/plain'),
         }
 
         if st.session_state.share_transfer:
             recipient_files = {
                 'file': (st.session_state.recipient_file.name, st.session_state.recipient_file, 'application/pdf'),
                 'source': (None, st.session_state.recipient_source, 'text/plain'),
-                'purpose': (None, st.session_state.recipient_purpose, 'text/plain'),
             }
 
         headers = {
@@ -115,8 +114,8 @@ def generate():
             st.session_state.pdf_price_transaction = autogen["price_transaction"]
             st.session_state.pdf_price = autogen["price"]
             st.session_state.pdf_trans_value = autogen["transaction_value"]
-            st.session_state.pdf_trans_value = autogen["transaction_value"]
             st.session_state.pdf_flag_tags = autogen.get("flag_tags", "")
+            st.session_state.pdf_purpose = autogen.get('purpose', '')
 
             if not st.session_state.share_transfer:
                 st.session_state.pdf_view = "post"
@@ -155,6 +154,7 @@ def generate():
             st.session_state.recipient_price = autogen_recipient["price"]
             st.session_state.recipient_trans_value = autogen_recipient["transaction_value"]
             st.session_state.recipient_flag_tags = autogen_recipient.get("flag_tags", "")
+            st.session_state.recipient_purpose = autogen_recipient.get('purpose', '')
 
             if response.status_code == 200:
                 st.session_state.pdf_view = "post"
@@ -225,7 +225,8 @@ def post():
             'tickers': tickers_list,
             'price_transaction': final_transaction,
             "share_transfer":flag_share_transfer,
-            'flag_tags': st.session_state.pdf_flag_tags
+            'flag_tags': st.session_state.pdf_flag_tags,
+            'purpose': st.session_state.pdf_purpose
         }
 
         if st.session_state.share_transfer:
@@ -266,7 +267,8 @@ def post():
                 'tickers': recipient_tickers_list,
                 'price_transaction': recipient_final_transaction,
                 'share_transfer_recipient': st.session_state.share_transfer,
-                'flag_tags': st.session_state.recipient_flag_tags
+                'flag_tags': st.session_state.recipient_flag_tags,
+                'purpose': st.session_state.recipient_purpose
             }
         
         else:
@@ -327,6 +329,7 @@ def post():
                 st.session_state.pdf_price_transaction = None
                 st.session_state.pdf_price = ""
                 st.session_state.pdf_trans_value = ""
+                st.session_state.pdf_purpose = ""
 
                 st.session_state.pdf_uid = ""
                 st.session_state.generate_uid = False
@@ -363,6 +366,7 @@ def post():
                 st.session_state.recipient_price_transaction = None
                 st.session_state.recipient_price = ""
                 st.session_state.recipient_trans_value = ""
+                st.session_state.recipient_purpose = ""
 
                 if res.status_code == 200:
                     st.toast("Insider trading submitted successfully! 🎉")
@@ -383,7 +387,6 @@ def post():
             st.error(f"🌐 Network error: {str(error)}")
         except Exception as error:
             st.error(f"💥 Unexpected error: {str(error)}")
-            import traceback
             st.code(traceback.format_exc())
 
 
@@ -458,13 +461,6 @@ def main_ui():
             placeholder="Enter URL", 
             key="pdf_source"
         )
-
-        # Purpose
-        insider.text_input(
-            'Pupose:red[*]',
-            placeholder="Enter purpose",
-            key="pdf_purpose"
-        )
         
         if not st.session_state.share_transfer:
             uid_value = st.session_state.pdf_uid if st.session_state.generate_uid else ""
@@ -493,13 +489,6 @@ def main_ui():
                 "Source:red[*]", 
                 placeholder="Enter URL", 
                 key="recipient_source"
-            )
-
-            # Purpose
-            insider.text_input(
-                'Pupose:red[*]',
-                placeholder="Enter purpose",
-                key="recipient_purpose"
             )
 
         # Submit button to parse pdf
@@ -570,6 +559,12 @@ def main_ui():
             placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", 
             key="pdf_tickers")
         
+        # Purpose
+        insider.text_area(
+            "Purpose:red[*]", 
+            placeholder="Enter purpose", 
+            key="pdf_purpose")
+        
         # Price transactions PDF
         price_transaction = st.session_state.get("pdf_price_transaction", {"amount_transacted": [], "prices": []})
         if price_transaction is None:
@@ -595,10 +590,13 @@ def main_ui():
                 value=price, 
                 key=f"price_{idx}"
             )
+
+            type_options = ["buy", "sell", 'other']
+            type_index = type_options.index(type.lower()) if type.lower() in type_options else 0
             price_transaction["types"][idx] = col3.selectbox(
                 f"Type", 
-                options = ["buy", "sell"], 
-                index=0 if type.lower() == "buy" else 1, 
+                options=type_options, 
+                index=type_index, 
                 format_func=format_option, 
                 key=f"type_{idx}"
             )
@@ -674,6 +672,12 @@ def main_ui():
                   key="recipient_tickers"
                 )
             
+            # Purpose
+            insider.text_area(
+                "Purpose:red[*]", 
+                placeholder="Enter recipient purpose", 
+                key="recipient_purpose")
+            
             # Price transactions share_transfer
             recipient_price_transaction = st.session_state.get("recipient_price_transaction", {"amount_transacted": [], "prices": []})
             if recipient_price_transaction is None:
@@ -699,10 +703,13 @@ def main_ui():
                     value=price, 
                     key=f"recipient_price_{idx}"
                 )
+
+                type_options = ["buy", "sell", 'other']
+                type_index = type_options.index(type.lower()) if type.lower() in type_options else 0
                 recipient_price_transaction["types"][idx] = col3.selectbox(
                     f"Type", 
-                    options = ["buy", "sell"], 
-                    index=0 if type.lower() == "buy" else 1, 
+                    options=type_options, 
+                    index=type_index, 
                     format_func=format_option, 
                     key=f"type_recipient_{idx}"
                 )

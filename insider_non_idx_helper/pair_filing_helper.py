@@ -207,10 +207,19 @@ def render_single_form(form_number: int):
             key=f"price{suffix}_{idx}",
             min_value=0
         )
+
+        current_type = price_transaction['types'][idx].lower()
+        if current_type == "buy":
+            type_index = 0
+        elif current_type == "sell":
+            type_index = 1
+        else:  
+            type_index = 2
+
         c3.selectbox(
             f"Type {idx + 1}",
             options=["buy", "sell", 'other'], 
-            index=0 if price_transaction["types"][idx] == "buy" else 1, 
+            index=type_index, 
             format_func=format_option,
             key=f"types{suffix}_{idx}"
         )
