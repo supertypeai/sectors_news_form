@@ -85,7 +85,8 @@ def generate():
 
         if response.status_code == 200: 
             autogen = response.json()
-
+            # with st.expander("🔍 Debug - Request Data"):
+            #     st.json(autogen)
             # Handle if type in price transaction is empty
             st.session_state.show_type_notice = False
             price_transaction = autogen["price_transaction"]
@@ -591,7 +592,7 @@ def main_ui():
                 key=f"price_{idx}"
             )
 
-            type_options = ["buy", "sell", 'other']
+            type_options = ["buy", "sell", 'others']
             type_index = type_options.index(type.lower()) if type.lower() in type_options else 0
             price_transaction["types"][idx] = col3.selectbox(
                 f"Type", 
@@ -704,7 +705,7 @@ def main_ui():
                     key=f"recipient_price_{idx}"
                 )
 
-                type_options = ["buy", "sell", 'other']
+                type_options = ["buy", "sell", 'others']
                 type_index = type_options.index(type.lower()) if type.lower() in type_options else 0
                 recipient_price_transaction["types"][idx] = col3.selectbox(
                     f"Type", 
