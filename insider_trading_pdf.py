@@ -1,4 +1,4 @@
-from datetime import datetime as dt
+from datetime import datetime as dt, date
 
 import streamlit as st
 import requests
@@ -198,7 +198,9 @@ def post():
             final_transaction["prices"].append(st.session_state[f"price_{idx}"])
             final_transaction['types'].append(st.session_state[f"type_{idx}"])
             date_value = st.session_state[f"date_{idx}"]
-            final_transaction['dates'].append(date_value.strftime("%Y-%m-%d") if isinstance(date_value, dt.date) else str(date_value))
+            final_transaction['dates'].append(
+                date_value.strftime("%Y-%m-%d") if hasattr(date_value, 'strftime') else str(date_value)
+            )
 
         if st.session_state.share_transfer:
             flag_share_transfer = st.session_state.share_transfer
@@ -238,8 +240,12 @@ def post():
                 recipient_final_transaction["amount_transacted"].append(st.session_state[f"recipient_amount_{idx}"])  
                 recipient_final_transaction["prices"].append(st.session_state[f"recipient_price_{idx}"])             
                 recipient_final_transaction['types'].append(st.session_state[f"type_recipient_{idx}"])
+                # date_value = st.session_state[f"date_recipient_{idx}"]
+                # recipient_final_transaction['dates'].append(date_value.strftime("%Y-%m-%d") if isinstance(date_value, dt.date) else str(date_value))
                 date_value = st.session_state[f"date_recipient_{idx}"]
-                recipient_final_transaction['dates'].append(date_value.strftime("%Y-%m-%d") if isinstance(date_value, dt.date) else str(date_value))
+                recipient_final_transaction['dates'].append(
+                    date_value.strftime("%Y-%m-%d") if hasattr(date_value, 'strftime') else str(date_value)
+                )
 
             recipient_data = {
                 'UID': uid,
