@@ -102,6 +102,7 @@ def generate():
             st.session_state.pdf_body=autogen["body"]
             st.session_state.pdf_date=timestamp.date()
             st.session_state.pdf_time=timestamp.time()
+            st.session_state.pdf_company_name=autogen["company_name"]
             st.session_state.pdf_holder_name=autogen["holder_name"]
             st.session_state.pdf_holding_before=autogen["holding_before"]
             st.session_state.pdf_share_percentage_before=autogen["share_percentage_before"]
@@ -140,6 +141,7 @@ def generate():
             st.session_state.recipient_body=autogen_recipient["body"]
             st.session_state.recipient_date=timestamp_recipient.date()
             st.session_state.recipient_time=timestamp_recipient.time()
+            st.session_state.recipient_company_name=autogen_recipient["company_name"]
             st.session_state.recipient_holder_name=autogen_recipient["holder_name"]
             st.session_state.recipient_holding_before=autogen_recipient["holding_before"]
             st.session_state.recipient_share_percentage_before=autogen_recipient["share_percentage_before"]
@@ -213,6 +215,7 @@ def post():
             'title': st.session_state.pdf_title,
             'body': st.session_state.pdf_body,
             'timestamp': dt.combine(st.session_state.pdf_date, st.session_state.pdf_time).strftime("%Y-%m-%d %H:%M:%S"),
+            'company_name': st.session_state.pdf_company_name,
             'holder_name': st.session_state.pdf_holder_name,
             'holder_type': st.session_state.pdf_holder_type,
             'holding_before': st.session_state.pdf_holding_before,
@@ -255,6 +258,7 @@ def post():
                 'title': st.session_state.recipient_title,
                 'body': st.session_state.recipient_body,
                 'timestamp': dt.combine(st.session_state.recipient_date, st.session_state.recipient_time).strftime("%Y-%m-%d %H:%M:%S"),
+                'company_name': st.session_state.recipient_company_name,
                 'holder_name': st.session_state.recipient_holder_name,
                 'holder_type': st.session_state.recipient_holder_type,
                 'holding_before': st.session_state.recipient_holding_before,
@@ -510,18 +514,90 @@ def main_ui():
         insider = st.form('insider')
 
         insider.subheader("Add Insider Trading (IDX Format)")
-        back_button = insider.form_submit_button("< Back", on_click=back)
+        insider.form_submit_button("< Back", on_click=back)
         insider.caption(":red[*] _required_")
-        source = insider.text_input("Source:red[*]", placeholder="Enter URL", key="pdf_source")
-        title = insider.text_input("Title:red[*]", placeholder="Enter title", key="pdf_title")
-        body = insider.text_area("Body:red[*]", placeholder="Enter body", key="pdf_body")
-        date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), format="YYYY-MM-DD", key="pdf_date")
-        time = insider.time_input("Created Time (GMT+7)*:red[*]", key="pdf_time", step=60)
-        holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder name", key="pdf_holder_name")
-        holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="pdf_holder_type")
-        holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="pdf_holding_before", min_value=0)
-        share_percentage_before = insider.number_input("Stock Ownership Percentage before Transaction:red[*]", placeholder="Enter stock ownership percentage before transaction", key="pdf_share_percentage_before", min_value=0.00000, max_value=100.00000, step=0.00001, format="%.5f")
-        amount_transaction = insider.number_input("Amount Transaction:red[*]", placeholder="Enter amount transaction", key="pdf_amount")
+
+        # Source
+        insider.text_input(
+            'Source:red[*]', 
+            placeholder='Enter URL', 
+            key='pdf_source'
+        )
+
+        # Title
+        insider.text_input(
+            'Title:red[*]', 
+            placeholder='Enter title', 
+            key='pdf_title'
+        )
+
+        # Body
+        insider.text_area(
+            'Body:red[*]', 
+            placeholder='Enter body', 
+            key='pdf_body'
+        )
+
+        # Created Date (GMT+7)
+        insider.date_input(
+            'Created Date (GMT+7):red[*]', 
+            max_value=dt.today(), 
+            format='YYYY-MM-DD', 
+            key='pdf_date'
+        )
+
+        # Created Time (GMT+7)
+        insider.time_input(
+            'Created Time (GMT+7)*:red[*]', 
+            key='pdf_time', 
+            step=60
+        )
+
+        # Company Name 
+        insider.text_input(
+            'Company Name:red[*]', 
+            placeholder='Enter company name',
+            key='pdf_company_name'
+        )
+
+        # Holder Name
+        insider.text_input(
+            'Holder Name:red[*]', 
+            placeholder='Enter holder name', 
+            key='pdf_holder_name'
+        )
+
+        # Holder Type
+        insider.selectbox(
+            'Holder Type:red[*]', 
+            options=['insider', 'institution'], 
+            format_func=format_option, 
+            key='pdf_holder_type'
+        )
+
+        # Holding Before 
+        insider.number_input(
+            'Stock Holding Before Transaction:red[*]', 
+            placeholder='Enter stock holding before transaction', 
+            min_value=0, 
+            key='pdf_holding_before'
+        )
+
+        # Share_percentage_before
+        insider.number_input(
+            "Stock Ownership Percentage before Transaction:red[*]", 
+            placeholder="Enter stock ownership percentage before transaction", 
+            key="pdf_share_percentage_before", 
+            min_value=0.00000, max_value=100.00000, step=0.00001, 
+            format="%.5f"
+        )
+        
+        # Amount_transaction
+        insider.number_input(
+            "Amount Transaction:red[*]", 
+            placeholder="Enter amount transaction", 
+            key="pdf_amount"
+        )
         
         # Holding after
         insider.number_input(
@@ -643,6 +719,14 @@ def main_ui():
             recipient_body = insider.text_area("Body:red[*]", placeholder="Enter body", key="recipient_body")
             recipient_date = insider.date_input("Created Date (GMT+7):red[*]", max_value=dt.today(), format="YYYY-MM-DD", key="recipient_date")
             recipient_time = insider.time_input("Created Time (GMT+7)*:red[*]", key="recipient_time", step=60)
+            
+            # Recipient Company Name 
+            insider.text_input(
+                'Recipient Company Name:red[*]', 
+                placeholder='Enter company name',
+                key='recipient_company_name'
+            )
+
             recipient_holder_name = insider.text_input("Holder Name:red[*]", placeholder="Enter holder name", key="recipient_holder_name")
             recipient_holder_type = insider.selectbox("Holder Type:red[*]", options = ["insider", "institution"], format_func=format_option, key="recipient_holder_type")
             recipient_holding_before = insider.number_input("Stock Holding before Transaction:red[*]", placeholder="Enter stock holding before transaction", key="recipient_holding_before", min_value=0)
