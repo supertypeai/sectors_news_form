@@ -510,6 +510,11 @@ def main_ui():
             # UID checkbox disabled
             st.checkbox("Single Filing", key="generate_uuid", disabled=True)
         
+        st.info(
+            "Update the purpose field to update the body description, "
+            "or directly edit the body field."
+        )
+
         # Form for insider trading details
         insider = st.form('insider')
 
