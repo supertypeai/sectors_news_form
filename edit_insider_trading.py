@@ -4,6 +4,8 @@ from supabase import create_client
 import streamlit as st
 import uuid
 import requests
+import pandas as pd 
+
 
 # Setup env
 API_KEY = st.secrets["API_KEY"]
@@ -46,6 +48,7 @@ AVAILABLE_SUBSECTORS = [
   "utilities"
 ]
 
+
 def fetch_data_fillings() -> list[dict]:
     supabase_client = create_client(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)
     try:
@@ -60,13 +63,18 @@ def fetch_data_fillings() -> list[dict]:
         st.error(f"Exception while fetching data insider trading: {error}")
         return None
     
-DATA = fetch_data_fillings()
+
+@st.cache_data
+def get_data():
+    return fetch_data_fillings()
+
 
 def edit():
+    data = get_data()
     selected_id = st.session_state.pdf_edit_id
     if selected_id != None:
         st.session_state.pdf_edit_view = "view2"
-        prev_data = next((item for item in DATA if item["id"] == selected_id), None)
+        prev_data = next((item for item in data if item["id"] == selected_id), None)
         if prev_data:
             try:
                 timestamp = dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S.%f")
@@ -104,6 +112,7 @@ def edit():
                 st.session_state.show_type_notice = False
     else:
         st.toast("Please select 1 id.")
+
 
 def post():
     required_fields = [
@@ -199,14 +208,18 @@ def post():
             st.write("Response content:", response.json()) 
             st.error(f"Error: Something went wrong. Please try again.")
 
+
 def back():
     st.session_state.pdf_edit_view = "view1"
+
 
 def format_option(option):
     return option.replace("-", " ").title()
 
+
 def generate_uid():
     return str(uuid.uuid4())
+
 
 def on_generate_uid_change():
     if st.session_state.generate_uid:
@@ -215,6 +228,18 @@ def on_generate_uid_change():
     else:
         # Clear UID when checkbox is unchecked
         st.session_state.pdf_uid = ""
+
+
+def clean_df_for_display(data):
+    df = pd.DataFrame(data)
+    for col in df.columns:
+        df[col] = df[col].apply(lambda x: 
+            ', '.join(map(str, x)) if isinstance(x, list) 
+            else str(x) if isinstance(x, dict) 
+            else x
+        )
+    return df
+
 
 def main_ui():
     # app
@@ -227,23 +252,32 @@ def main_ui():
     if 'pdf_uid' not in st.session_state:
         st.session_state.pdf_uid = None
 
+    data = get_data()
+    
     st.title("Sectors News")
 
     # file submission
     if st.session_state.pdf_edit_view == "view1":
         st.subheader("Edit Insider Trading")
 
-        if (len(DATA) > 0):
+        if (len(data) > 0):
             form = st.form("edit")
-            selected_id = form.selectbox("Select id", [i['id'] for i in sorted(DATA, key=lambda x: x["id"])], key="pdf_edit_id")
+            
+            form.selectbox(
+                "Select id", 
+                [i['id'] for i in sorted(data, key=lambda x: x["id"])], 
+                key="pdf_edit_id"
+            )
+
             form.form_submit_button("Edit", type="primary", on_click=edit)
 
-            st.dataframe(sorted(DATA, key=lambda x: x["id"], reverse=True), 
+            df = clean_df_for_display(sorted(data, key=lambda x: x["id"], reverse=True))
+            st.dataframe(df, 
                 column_order=["id", "title", "body", "source", "timestamp", "holder_name", 
-                              "holder_type", "holding_before", "share_percentage_before", 
-                              "amount_transaction", "transaction_type", "holding_after", 
-                              "share_percentage_after", "price_transaction", "price", 
-                              "transaction_value", "sector", "sub_sector", "tags", "tickers", "UID"],
+                            "holder_type", "holding_before", "share_percentage_before", 
+                            "amount_transaction", "transaction_type", "holding_after", 
+                            "share_percentage_after", "price_transaction", "price", 
+                            "transaction_value", "sector", "sub_sector", "tags", "tickers", "UID"],
                 selection_mode="single-row"
             )
         else: 
@@ -475,6 +509,7 @@ def main_ui():
 
         # Submit button to update the data form
         insider.form_submit_button("Submit", on_click=post)
+
 
 if __name__ == "__main__":
     main_ui()

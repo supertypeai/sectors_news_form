@@ -9,7 +9,7 @@ SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 
 
-def fetch_data_fillings() -> list[dict]:
+def fetch_data_sgx_fillings() -> list[dict]:
     supabase_client = create_client(supabase_url=SUPABASE_URL, supabase_key=SUPABASE_KEY)
     try:
         response = supabase_client.table("sgx_filings").select("*").execute()
@@ -40,7 +40,7 @@ def upsert_data(data):
 
 @st.cache_data
 def get_data():
-    return fetch_data_fillings()
+    return fetch_data_sgx_fillings()
 
 
 def back():
