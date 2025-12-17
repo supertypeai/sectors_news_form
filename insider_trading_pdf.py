@@ -432,6 +432,12 @@ def main_ui():
     
     if 'recipient_flag_tags' not in st.session_state:
         st.session_state.recipient_flag_tags = ""
+    
+    if 'recipient_subsector' not in st.session_state:
+        st.session_state.recipient_subsector = AVAILABLE_SUBSECTORS[0]
+
+    if 'pdf_subsector' not in st.session_state:
+        st.session_state.pdf_subsector = AVAILABLE_SUBSECTORS[0]
 
     st.title("Sectors News")
 
