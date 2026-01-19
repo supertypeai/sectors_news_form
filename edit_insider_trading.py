@@ -6,6 +6,7 @@ import streamlit as st
 import uuid
 import requests
 import pandas as pd 
+import traceback
 
 
 # Setup env
@@ -123,7 +124,8 @@ def post():
         "pdf_edit_tags",
         "pdf_edit_symbol",
         "pdf_edit_price_transaction",
-        'pdf_edit_purpose'
+        'pdf_edit_purpose',
+        'pdf_edit_company_name'
     ]
 
     # Check if any required field is empty/false
@@ -140,7 +142,7 @@ def post():
     
         final_transactions = []
         num_entries = len(st.session_state.pdf_edit_price_transaction)
-        
+
         for idx in range(num_entries):
             final_transactions.append({
                 "date": st.session_state[f"date_{idx}"].strftime("%Y-%m-%d"),
@@ -157,6 +159,7 @@ def post():
             'body': st.session_state.pdf_edit_body,
             'timestamp': dt.combine(st.session_state.pdf_edit_date, st.session_state.pdf_edit_time).strftime("%Y-%m-%d %H:%M:%S"),
             'holder_name': st.session_state.pdf_edit_holder_name,
+            'company_name': st.session_state.pdf_edit_company_name,
             'holder_type': st.session_state.pdf_edit_holder_type,
             'holding_before': st.session_state.pdf_edit_holding_before,
             'share_percentage_before': st.session_state.pdf_edit_share_percentage_before,
@@ -179,40 +182,44 @@ def post():
 
         # update_insider_trading_supabase(data, True)
 
-        response = requests.patch(
-            "https://sectors-news-endpoint.fly.dev/insider-trading", 
-            headers = headers, 
-            json=data
-        )
+        try:
+            response = requests.patch(
+                "https://sectors-news-endpoint.fly.dev/insider-trading", 
+                headers = headers, 
+                json=data
+            )
 
-        if response.status_code == 200:
-            st.toast("Insider trading editted successfully! 🎉")
-            st.session_state.pdf_uid=""
-            st.session_state.pdf_edit_source=""
-            st.session_state.pdf_edit_title=""
-            st.session_state.pdf_edit_body=""
-            st.session_state.pdf_edit_date=dt.today()
-            st.session_state.pdf_edit_time=dt.now()
-            st.session_state.pdf_edit_holder_name=""
-            st.session_state.pdf_edit_holder_type="insider"
-            st.session_state.pdf_edit_holding_before=0
-            st.session_state.pdf_edit_share_percentage_before=0
-            st.session_state.pdf_edit_amount=0
-            # st.session_state.pdf_edit_transaction_type="buy"
-            st.session_state.pdf_edit_holding_after=0
-            st.session_state.pdf_edit_share_percentage_after=0
-            st.session_state.pdf_edit_subsector=AVAILABLE_SUBSECTORS[0]
-            st.session_state.pdf_edit_tags=""
-            st.session_state.pdf_edit_tickers=""
-            st.session_state.pdf_edit_view = "view1"
-            st.session_state.pdf_edit_price_transaction = None
-            st.session_state.pdf_edit_price = ""
-            st.session_state.pdf_edit_trans_value = ""
-        else:
-            # Handle error
-            st.write("Response content:", response.json()) 
-            st.error(f"Error: Something went wrong. Please try again.")
+            if response.status_code == 200:
+                st.toast("Insider trading editted successfully! 🎉")
+                st.session_state.pdf_uid=""
+                st.session_state.pdf_edit_source=""
+                st.session_state.pdf_edit_title=""
+                st.session_state.pdf_edit_body=""
+                st.session_state.pdf_edit_date=dt.today()
+                st.session_state.pdf_edit_time=dt.now()
+                st.session_state.pdf_edit_holder_name=""
+                st.session_state.pdf_edit_holder_type="insider"
+                st.session_state.pdf_edit_holding_before=0
+                st.session_state.pdf_edit_share_percentage_before=0
+                st.session_state.pdf_edit_amount=0
+                # st.session_state.pdf_edit_transaction_type="buy"
+                st.session_state.pdf_edit_holding_after=0
+                st.session_state.pdf_edit_share_percentage_after=0
+                st.session_state.pdf_edit_subsector=AVAILABLE_SUBSECTORS[0]
+                st.session_state.pdf_edit_tags=""
+                st.session_state.pdf_edit_tickers=""
+                st.session_state.pdf_edit_view = "view1"
+                st.session_state.pdf_edit_price_transaction = None
+                st.session_state.pdf_edit_price = ""
+                st.session_state.pdf_edit_trans_value = ""
+            else:
+                # Handle error
+                st.write("Response content:", response.json()) 
+                st.error(f"Error: Something went wrong. Please try again.")
 
+        except Exception as error:
+            st.error(f"Unexpected error: {str(error)}")
+            st.code(traceback.format_exc())
 
 def back():
     st.session_state.pdf_edit_view = "view1"
@@ -373,6 +380,14 @@ def main_ui():
             placeholder="Enter holder name", key="pdf_edit_holder_name"
         )
         
+        # Company name form
+        insider.text_input(
+            "Company Name:red[*]", 
+            value=None, 
+            placeholder="Enter company name to build body and title", 
+            key="pdf_edit_company_name"
+        )
+
         # Holder type form
         insider.selectbox(
             "Holder Type:red[*]", 
