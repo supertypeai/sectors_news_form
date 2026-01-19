@@ -1,5 +1,6 @@
 from datetime import datetime as dt
 from supabase import create_client
+# from edit_insider_trading_function import update_insider_trading_supabase
 
 import streamlit as st
 import uuid
@@ -72,14 +73,17 @@ def get_data():
 def edit():
     data = get_data()
     selected_id = st.session_state.pdf_edit_id
+
     if selected_id != None:
         st.session_state.pdf_edit_view = "view2"
         prev_data = next((item for item in data if item["id"] == selected_id), None)
+
         if prev_data:
             try:
                 timestamp = dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S.%f")
             except ValueError:
                 timestamp = dt.strptime(prev_data["timestamp"], "%Y-%m-%dT%H:%M:%S")
+
             st.session_state.pdf_edit_uid=prev_data["UID"]
             st.session_state.pdf_edit_source=prev_data["source"]
             st.session_state.pdf_edit_title=prev_data["title"]
@@ -96,20 +100,12 @@ def edit():
             st.session_state.pdf_edit_share_percentage_after=prev_data["share_percentage_after"]
             st.session_state.pdf_edit_subsector=prev_data["sub_sector"]
             st.session_state.pdf_edit_tags=', '.join(prev_data["tags"])
-            st.session_state.pdf_edit_tickers=', '.join(prev_data["tickers"]) if prev_data["tickers"] else None
+            st.session_state.pdf_edit_symbol=prev_data['symbol']
             st.session_state.pdf_edit_price_transaction = prev_data["price_transaction"]
             st.session_state.pdf_edit_price = prev_data["price"]
             st.session_state.pdf_edit_trans_value = prev_data["transaction_value"]
             st.session_state.pdf_edit_view = "view2"
 
-            # Check if types key exists in price_transaction
-            price_transaction = prev_data["price_transaction"]
-            if (price_transaction and 
-                len(price_transaction.get("amount_transacted", [])) > 0 and 
-                'types' not in price_transaction):
-                st.session_state.show_type_notice = True
-            else:
-                st.session_state.show_type_notice = False
     else:
         st.toast("Please select 1 id.")
 
@@ -125,8 +121,9 @@ def post():
         "pdf_edit_holder_type",
         "pdf_edit_subsector",
         "pdf_edit_tags",
-        "pdf_edit_tickers",
+        "pdf_edit_symbol",
         "pdf_edit_price_transaction",
+        'pdf_edit_purpose'
     ]
 
     # Check if any required field is empty/false
@@ -140,15 +137,18 @@ def post():
             final_uid = manual_uid if manual_uid else None
 
         tags_list = [tag.strip() for tag in st.session_state.pdf_edit_tags.split(',') if tag.strip()]
-        tickers_list = [ticker.strip() for ticker in st.session_state.pdf_edit_tickers.split(',') if ticker.strip()]
-
-        final_transactions = {"amount_transacted": [], "prices": [], 'types': []}
-        num_entries = len(st.session_state.pdf_edit_price_transaction["amount_transacted"])
-        for idx in range(num_entries):
-            final_transactions["amount_transacted"].append(st.session_state[f"amount_{idx}"])
-            final_transactions["prices"].append(st.session_state[f"price_{idx}"])
-            final_transactions['types'].append(st.session_state[f"types_{idx}"])
+    
+        final_transactions = []
+        num_entries = len(st.session_state.pdf_edit_price_transaction)
         
+        for idx in range(num_entries):
+            final_transactions.append({
+                "date": st.session_state[f"date_{idx}"].strftime("%Y-%m-%d"),
+                "amount_transacted": st.session_state[f"amount_{idx}"],
+                "price": st.session_state[f"price_{idx}"],
+                "type": st.session_state[f"type_{idx}"].lower() 
+            })
+
         data = {
             'id': st.session_state.pdf_edit_id,
             'UID': final_uid,
@@ -166,7 +166,8 @@ def post():
             'share_percentage_after': st.session_state.pdf_edit_share_percentage_after,
             'sub_sector': st.session_state.pdf_edit_subsector,
             'tags': tags_list,
-            'tickers': tickers_list,
+            'symbol': st.session_state.pdf_edit_symbol,
+            'purpose': st.session_state.pdf_edit_purpose,
             'price_transaction': final_transactions
         }
 
@@ -174,6 +175,10 @@ def post():
             "Authorization": f"Bearer {API_KEY}"
         }
         
+        st.write(data)
+
+        # update_insider_trading_supabase(data, True)
+
         response = requests.patch(
             "https://sectors-news-endpoint.fly.dev/insider-trading", 
             headers = headers, 
@@ -285,12 +290,6 @@ def main_ui():
             st.page_link("insider_trading_pdf.py", label="Add Insider Trading", icon=":material/arrow_back:")
 
     elif st.session_state.pdf_edit_view == "view2":
-        # Info notice if types were not previously set in db
-        if st.session_state.get('show_type_notice', False):
-            st.warning("Note: Transaction types were not previously set in db. " \
-                    "Defaulting to 'buy' for all entries. " \
-                    "Please review and adjust as necessary, because this may affect the calculated price, transaction value, and transaction type")
-        
         generate_uid_checkbox = st.checkbox(
             "Generate UID", 
             key="generate_uid", 
@@ -392,16 +391,19 @@ def main_ui():
 
         # Share percentage before form    
         share_percentage_before = st.session_state.get("pdf_edit_share_percentage_before")
+
         if share_percentage_before == 0:
             share_percentage_before = float(share_percentage_before)
+
         insider.number_input(
             "Stock Ownership Percentage before Transaction:red[*]",
             value=share_percentage_before, 
             placeholder="Enter stock ownership percentage before transaction",
-            key="pdf_edit_share_percentage_before", min_value=0.00000,
-            max_value=100.00000, 
-            step=0.00001,
-            format="%.5f"
+            key="pdf_edit_share_percentage_before", 
+            min_value=0.000,
+            max_value=100.000, 
+            step=0.001, 
+            format="%.3f"
         )
         
         # Amount transaction form
@@ -422,17 +424,19 @@ def main_ui():
         
         # Share percentage after form  
         share_percentage_after = st.session_state.get("pdf_edit_share_percentage_after")
+        
         if share_percentage_after == 0:
             share_percentage_after = float(share_percentage_after)
+
         insider.number_input(
             "Stock Ownership Percentage after Transaction:red[*]", 
             value=share_percentage_after,
             placeholder="Enter stock ownership percentage after transaction", 
             key="pdf_edit_share_percentage_after", 
-            min_value=0.00000, 
-            max_value=100.00000, 
-            step=0.00001, 
-            format="%.5f"
+            min_value=0.000, 
+            max_value=100.000, 
+            step=0.001, 
+            format="%.3f"
         )
 
         # Subsector form
@@ -450,45 +454,64 @@ def main_ui():
             placeholder="Enter tags separated by commas, e.g. idx, market-cap", 
             key="pdf_edit_tags")
         
-        # Ticker form
+        # Symbol form
         insider.text_area(
-            "Tickers:red[*]", 
-            value=st.session_state.get("pdf_edit_tickers", ""), 
-            placeholder="Enter tickers separated by commas, e.g. BBCA.JK, BBRI.JK", 
-            key="pdf_edit_tickers")
+            "Symbol:red[*]", 
+            value=st.session_state.get("pdf_edit_symbol", ""), 
+            placeholder="Enter symbol e.g. BBCA.JK", 
+            key="pdf_edit_symbol")
 
-        price_transaction = st.session_state.get("pdf_edit_price_transaction", 
-                                                {"amount_transacted": [], "prices": [], "types": []})
+        # Purpose form
+        insider.text_area(
+            "Purpose:red[*]", 
+            value=st.session_state.get("pdf_edit_purpose", ""), 
+            placeholder="Enter Purpose to build body", 
+            key="pdf_edit_purpose")
+        
+        price_transaction = st.session_state.get("pdf_edit_price_transaction", [])
         if price_transaction is None:
-            price_transaction = {"amount_transacted": [], "prices": [], "types": []}
-
-        if 'types' not in price_transaction or not price_transaction.get('types'):
-            price_transaction['types'] = ['buy'] * len(price_transaction['amount_transacted'])
+            price_transaction = []
 
         transaction_container = insider.expander("Transactions", expanded=True)
 
-        for idx, (amount, price, type) in enumerate(zip(price_transaction["amount_transacted"], price_transaction["prices"], price_transaction["types"])):
-            col1, col2, col3, col4 = transaction_container.columns([2, 2, 2, 2], vertical_alignment="bottom")
+        for idx, transaction in enumerate(price_transaction):
+            col1, col2, col3, col4, col5 = transaction_container.columns([2, 2, 2, 2, 2], vertical_alignment="bottom")
             
-            col1.number_input(f"Amount Transacted {idx + 1}", value=amount, key=f"amount_{idx}")
-            col2.number_input(f"Price {idx + 1}", value=price, key=f"price_{idx}")
-            col3.selectbox(f"Type {idx + 1}", 
-                            options=['Buy', 'Sell'], 
-                            index=0 if type.lower() == "buy" else 1,  
-                            format_func=format_option, 
-                            key=f"types_{idx}")
+            transaction_date = transaction.get('date')
+            if transaction_date:
+                display_date = dt.strptime(transaction_date, "%Y-%m-%d").date()
+            else:
+                display_date = dt.now().strftime("%Y-%m-%d")
 
-            remove_button = col4.form_submit_button(f"Remove Transaction {idx + 1}")
+            col1.date_input(f"Date {idx + 1}", 
+                            value=display_date,
+                            key=f"date_{idx}")
+            
+            col2.number_input(f"Amount Transacted {idx + 1}", 
+                            value=transaction.get("amount_transacted", 0), 
+                            key=f"amount_{idx}")
+            
+            col3.number_input(f"Price {idx + 1}", 
+                            value=transaction.get("price", 0), 
+                            key=f"price_{idx}")
+            
+            col4.selectbox(f"Type {idx + 1}", 
+                        options=['buy', 'sell'], 
+                        index=0 if transaction.get("type", "buy").lower() == "buy" else 1,  
+                        key=f"type_{idx}")
+            
+            remove_button = col5.form_submit_button(f"Remove {idx + 1}")
             if remove_button:
-                st.session_state.pdf_edit_price_transaction["amount_transacted"].pop(idx)
-                st.session_state.pdf_edit_price_transaction["prices"].pop(idx)
-                st.session_state.pdf_edit_price_transaction["types"].pop(idx)
+                st.session_state.pdf_edit_price_transaction.pop(idx)
                 st.rerun()
-        
+
         if transaction_container.form_submit_button("Add Transaction"):
-            st.session_state.pdf_edit_price_transaction["amount_transacted"].append(0)
-            st.session_state.pdf_edit_price_transaction["prices"].append(0)
-            st.session_state.pdf_edit_price_transaction["types"].append("Buy")
+            st.session_state.pdf_edit_price_transaction.append({
+                "date": dt.now().strftime("%Y-%m-%d"),  
+                "type": "buy",
+                "price": 0,
+                "amount_transacted": 0
+            })
             st.rerun()
 
         # Price form
