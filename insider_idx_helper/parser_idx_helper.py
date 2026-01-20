@@ -679,6 +679,10 @@ def parser_new_document(filename: str, source_url: str):
     symbol = extract_symbol_and_company_name(text)
     # print(f'raw symbol: {symbol}')
 
+    # Get sub sector 
+    companies_lookup = open_json('data/companies.json')
+    sub_sector = companies_lookup.get(symbol.get('symbol')).get('sub_sector')
+
     # Cross verify symbol with company lookup
     if company_lookup and symbol: 
         company_name_lookup = company_lookup.get(symbol.get('symbol'))
@@ -720,7 +724,8 @@ def parser_new_document(filename: str, source_url: str):
         extracted_data.update({
             'title': title, 
             'body': body,
-            'source_url': source_url
+            'source_url': source_url,
+            'sub_sector': sub_sector
         })
 
     if price_data_others is not None:
@@ -729,8 +734,15 @@ def parser_new_document(filename: str, source_url: str):
         extracted_data_others.update({
             'title': title, 
             'body': body,
-            'source_url': source_url
+            'source_url': source_url,
+            'sub_sector': sub_sector
         })
 
     return extracted_data_others if price_data_others else None, extracted_data if price_data_no_others else None
-  
+
+
+if __name__ == '__main__':
+    file = 'sample_pdf/need_to_test.pdf'
+    url = 'test'
+    r = parser_new_document(file, url)
+    print(json.dumps(r, indent=2))
