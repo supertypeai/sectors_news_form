@@ -158,8 +158,8 @@ def generate():
             save_temp_path, source_url=st.session_state.pdf_source
         )
         
-        with st.expander(f"Debug - response others Request Data"):
-            st.json(response_others)
+        # with st.expander(f"Debug - response others Request Data"):
+        #     st.json(response_others)
 
         # Store which data exists for main PDF
         st.session_state.has_pdf_others = response_others is not None
