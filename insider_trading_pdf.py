@@ -2,6 +2,7 @@ from datetime import datetime as dt
 from supabase import create_client 
 
 from insider_idx_helper.parser_idx_helper import parser_new_document
+# from insert_trading_function import insert_insider_trading_supabase
 
 import streamlit as st
 import requests
@@ -253,7 +254,7 @@ def post_form(prefix: str, form_label: str):
         if 'pair_filing_uid' not in st.session_state:
             st.session_state.pair_filing_uid = str(uuid.uuid4())
         data['UID'] = st.session_state.pair_filing_uid
-        data['tags'] = 'share_transfer'
+        data['tags'] = ['share_transfer']
         
         # Determine if this is recipient
         if prefix.startswith('recipient'):
