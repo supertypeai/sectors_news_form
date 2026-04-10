@@ -1,5 +1,7 @@
 from supabase import create_client
 
+from utils.add_sgx_filings_helper import generate_title_and_body
+
 import streamlit as st 
 import json 
 import time
@@ -29,6 +31,34 @@ def push_data(payload: list[dict[str, any]]):
         return False, f"Error: {str(error)}"
 
 
+def sanitize_data(records: list[dict]) ->list[dict]:
+    for record in records:
+        holder_name = record.get('holder_name')
+        issuer_name = record.get('issuer_name')
+        tx_type = record.get('transaction_type')
+        amount = record.get('amount_transaction')
+        holding_before = record.get('holding_before')
+        holding_after = record.get('holding_after')
+
+        title, body = generate_title_and_body(
+            holder_name=holder_name, 
+            company_name=issuer_name, 
+            tx_type=tx_type, 
+            amount=amount, 
+            holding_before=holding_before, 
+            holding_after=holding_after,
+            purpose_en=None
+        )
+
+        record['title'] = title
+        record['body'] = body 
+        
+        record.pop("reasons", None)
+        record.pop("issuer_name", None)
+    
+    return records 
+
+
 def main_ui():
     st.set_page_config(
         page_title="SGX Filing Uploader",
@@ -54,20 +84,23 @@ def main_ui():
                 content = uploaded_file.read()
                 data = json.loads(content)
                 
+                sanitized_data = sanitize_data(data)
+
                 # Validate it's a list
-                if not isinstance(data, list):
+                if not isinstance(sanitized_data, list):
                     st.error("❌ JSON must contain an array of objects")
                     return
                 
-                st.success(f"✅ File loaded successfully! Found {len(data)} records")
+                st.success(f"✅ File loaded successfully! Found {len(sanitized_data)} records")
                 
                 # Preview section
                 with st.expander("👁️ Preview Data", expanded=True):
-                    st.json(data[:3] if len(data) > 3 else data, expanded=False)
-                    if len(data) > 3:
-                        st.info(f"Showing first 3 of {len(data)} records")
+                    st.json(sanitized_data[:3] if len(data) > 3 else sanitized_data, expanded=False)
+                    
+                    if len(sanitized_data) > 3:
+                        st.info(f"Showing first 3 of {len(sanitized_data)} records")
                 
-                st.session_state['json_data'] = data
+                st.session_state['json_data'] = sanitized_data
                 
             except json.JSONDecodeError:
                 st.error("❌ Invalid JSON format. Please upload a valid JSON file.")
