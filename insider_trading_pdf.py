@@ -2,14 +2,13 @@ from datetime import datetime as dt
 from supabase import create_client 
 
 from insider_idx_helper.parser_idx_helper import parser_new_document
-# from insert_trading_function import insert_insider_trading_supabase
+# from test_add_insider_pdf import insert_insider_trading_supabase
 
 import streamlit as st
 import requests
 import uuid
 import traceback
 import tempfile
-import time
 
 
 # data
@@ -95,7 +94,7 @@ def populate_session_from_data(data: dict, prefix: str):
     
     timestamp = dt.strptime(data.get("timestamp", dt.now().strftime("%Y-%m-%d %H:%M:%S")), "%Y-%m-%d %H:%M:%S")
     
-    st.session_state[f"{prefix}_source"] = data.get("source_url", "")
+    st.session_state[f"{prefix}_source"] = data.get("source", "")
     st.session_state[f"{prefix}_subsector"] = data.get("sub_sector", AVAILABLE_SUBSECTORS[0])
     st.session_state[f"{prefix}_title"] = data.get("title", "")
     st.session_state[f"{prefix}_body"] = data.get("body", "")
@@ -134,7 +133,7 @@ def populate_session_from_data(data: dict, prefix: str):
     st.session_state[f"{prefix}_price_transaction"] = converted_transaction
     
     # Handle type notice
-    if not converted_transaction["types"] or all(type == "" for type in converted_transaction["types"]):
+    if not converted_transaction["types"] or all(t == "" for t in converted_transaction["types"]):
         num_transactions = len(converted_transaction["prices"])
         st.session_state[f"{prefix}_price_transaction"]["types"] = ["buy"] * num_transactions
         st.session_state[f"{prefix}_show_type_notice"] = True
@@ -145,56 +144,31 @@ def populate_session_from_data(data: dict, prefix: str):
 
 
 def generate():
-    if (
-        (not st.session_state.pdf_source or not st.session_state.file) or 
-        (st.session_state.share_transfer and (not st.session_state.recipient_source or not st.session_state.recipient_file))
-    ):
-        st.toast("Please fill out the required fields")
+    if (not st.session_state.pdf_source or not st.session_state.file) or (st.session_state.share_transfer and (not st.session_state.recipient_source or not st.session_state.recipient_file)):
+        st.toast("Please fill out the required fields.")
         return
-    
-    try:
-        # Parse main PDF
-        save_temp_path = save_temp(st.session_state.file)
-        response_others, response_no_others = parser_new_document(
-            save_temp_path, source_url=st.session_state.pdf_source
-        )
-        
-        # with st.expander(f"Debug - response others Request Data"):
-        #     st.json(response_others)
 
-        # Store which data exists for main PDF
-        st.session_state.has_pdf_others = response_others is not None
-        st.session_state.has_pdf_no_others = response_no_others is not None
-        
-        # Populate main PDF data
-        if response_others:
-            populate_session_from_data(response_others, "pdf_others")
-        if response_no_others:
-            populate_session_from_data(response_no_others, "pdf_no_others")
-        
-        # Parse recipient PDF if pair filings
+    try:
+        main_temp_path = save_temp(st.session_state.file)
+        main_results = parser_new_document(
+            pdf_local_path=main_temp_path, pdf_url=st.session_state.pdf_source
+        )
+        st.session_state.pdf_results = main_results
+        for idx, result in enumerate(main_results):
+            populate_session_from_data(result, f"pdf_{idx}")
+
         if st.session_state.share_transfer:
             recipient_temp_path = save_temp(st.session_state.recipient_file)
-            recipient_response_others, recipient_response_no_others = parser_new_document(
-                recipient_temp_path, source_url=st.session_state.recipient_source
+            recipient_results = parser_new_document(
+                pdf_local_path=recipient_temp_path, pdf_url=st.session_state.recipient_source
             )
-            
-            # Store which data exists for recipient PDF
-            st.session_state.has_recipient_others = recipient_response_others is not None
-            st.session_state.has_recipient_no_others = recipient_response_no_others is not None
-            
-            # Populate recipient PDF data
-            if recipient_response_others:
-                populate_session_from_data(recipient_response_others, "recipient_others")
-            if recipient_response_no_others:
-                populate_session_from_data(recipient_response_no_others, "recipient_no_others")
-        
-        # Initialize submission tracking
+            st.session_state.recipient_results = recipient_results
+            for idx, result in enumerate(recipient_results):
+                populate_session_from_data(result, f"recipient_{idx}")
+
         st.session_state.submitted_forms = set()
-        
-        # Move to post view
         st.session_state.pdf_view = "post"
-        
+
     except Exception as error:
         st.error(f"Error parsing PDF: {str(error)}")
         st.code(traceback.format_exc())
@@ -204,25 +178,29 @@ def post_form(prefix: str, form_label: str):
     """
     Submit a single form identified by prefix
     """
-    # Define required fields
     required_fields = [
-        f"{prefix}_source", f"{prefix}_title", f"{prefix}_body", 
+        f"{prefix}_source", 
         f"{prefix}_date", f"{prefix}_time", f"{prefix}_holder_name", 
         f"{prefix}_subsector", f"{prefix}_symbol", f"{prefix}_price_transaction"
     ]
     
-    # Validation
     if not all(st.session_state.get(field) for field in required_fields):
         st.toast(f"Please fill out required fields for {form_label}")
         return
     
     # Build transaction data
-    final_transaction = {"amount_transacted": [], "prices": [], "types": [], 'dates': []}
+    final_transaction = {
+        "amount_transacted": [], 
+        "prices": [], 
+        "types": [], 
+        'dates': []
+    }
     
     for idx in range(len(st.session_state[f"{prefix}_price_transaction"]["amount_transacted"])):
         final_transaction["amount_transacted"].append(st.session_state[f"{prefix}_amount_{idx}"])
         final_transaction["prices"].append(st.session_state[f"{prefix}_price_{idx}"])
         final_transaction['types'].append(st.session_state[f"{prefix}_type_{idx}"])
+
         date_value = st.session_state[f"{prefix}_date_{idx}"]
         final_transaction['dates'].append(
             date_value.strftime("%Y-%m-%d") if hasattr(date_value, 'strftime') else str(date_value)
@@ -253,8 +231,9 @@ def post_form(prefix: str, form_label: str):
     if st.session_state.share_transfer:
         if 'pair_filing_uid' not in st.session_state:
             st.session_state.pair_filing_uid = str(uuid.uuid4())
+
         data['UID'] = st.session_state.pair_filing_uid
-        data['tags'] = ['share_transfer']
+        data['tags'] = 'share_transfer'
         
         # Determine if this is recipient
         if prefix.startswith('recipient'):
@@ -270,45 +249,32 @@ def post_form(prefix: str, form_label: str):
         
         res = requests.post(
             "https://sectors-news-endpoint.fly.dev/pdf/post", 
+            
             headers=headers, 
             json=data,
             timeout=60
         )
 
+        # print(f'response result: {res.json()}')
+
+        # res = insert_insider_trading_supabase(
+        #     data
+        # )
+    
         st.write(f"{form_label} status: {res.status_code}")
 
         if res.status_code == 200:
-            st.session_state.submitted_forms.add(prefix)
             st.toast(f"{form_label} submitted successfully!")
-            time.sleep(1)
-
-            # Check if all forms are submitted
-            expected_forms = set()
-            if st.session_state.has_pdf_others:
-                expected_forms.add("pdf_others")
-            if st.session_state.has_pdf_no_others:
-                expected_forms.add("pdf_no_others")
-            if st.session_state.share_transfer:
-                if st.session_state.has_recipient_others:
-                    expected_forms.add("recipient_others")
-                if st.session_state.has_recipient_no_others:
-                    expected_forms.add("recipient_no_others")
-            
-            if st.session_state.submitted_forms == expected_forms:
-                st.success("All forms submitted successfully!")
-                st.balloons()
-
-            st.rerun()
-
         else:
             st.error(f"API Error {res.status_code}")
             try:
                 st.json(res.json())
             except:
                 st.code(res.text)
-
+                
     except requests.exceptions.Timeout:
         st.error("Request timed out. Please try again.")
+
     except Exception as error:
         st.error(f"Unexpected error: {str(error)}")
         st.code(traceback.format_exc())
@@ -318,6 +284,7 @@ def render_form_fields(prefix: str, form_label: str):
     """
     Render all form fields for a given prefix
     """
+    
     # Show type notice 
     if st.session_state.get(f"{prefix}_show_type_notice", False):
         st.warning(f'{form_label}: Document has no type (buy/sell) in price transactions. Please adjust as needed')
@@ -333,14 +300,16 @@ def render_form_fields(prefix: str, form_label: str):
     st.text_input(
         'Title*', 
         placeholder='Enter title', 
-        key=f'{prefix}_title'
+        key=f'{prefix}_title',
+        disabled=True
     )
     
     # Body
     st.text_area(
         'Body*', 
         placeholder='Enter body', 
-        key=f'{prefix}_body'
+        key=f'{prefix}_body',
+        disabled=True
     )
     
     # Date and Time
@@ -479,6 +448,7 @@ def render_form_fields(prefix: str, form_label: str):
         )
         
         if col5.button("Remove", key=f"{prefix}_remove_{idx}"):
+            # Remove from all lists
             st.session_state[f"{prefix}_price_transaction"]["amount_transacted"].pop(idx)
             st.session_state[f"{prefix}_price_transaction"]["prices"].pop(idx)
             st.session_state[f"{prefix}_price_transaction"]["types"].pop(idx)
@@ -486,6 +456,7 @@ def render_form_fields(prefix: str, form_label: str):
             st.rerun()
     
     if transaction_container.button("Add Transaction", key=f"{prefix}_add_transaction"):
+        # Add default values to all lists
         st.session_state[f"{prefix}_price_transaction"]["amount_transacted"].append(0)
         st.session_state[f"{prefix}_price_transaction"]["prices"].append(0)
         st.session_state[f"{prefix}_price_transaction"]["types"].append("buy")
@@ -595,23 +566,20 @@ def main_ui():
         
         st.caption(":red[*] _required_")
         
-        # Render forms based on what data exists
-        forms_to_render = []
-        
-        if st.session_state.get('has_pdf_others', False):
-            forms_to_render.append(("pdf_others", "Main PDF - Others Transactions"))
-        if st.session_state.get('has_pdf_no_others', False):
-            forms_to_render.append(("pdf_no_others", "Main PDF - Buy/Sell Transactions"))
-        if st.session_state.share_transfer:
-            if st.session_state.get('has_recipient_others', False):
-                forms_to_render.append(("recipient_others", "Recipient PDF - Others Transactions"))
-            if st.session_state.get('has_recipient_no_others', False):
-                forms_to_render.append(("recipient_no_others", "Recipient PDF - Buy/Sell Transactions"))
-        
-        # Render each form in an expander
-        for prefix, label in forms_to_render:
+        for idx, result in enumerate(st.session_state.get('pdf_results', [])):
+            transaction_type = result.get('transaction_type', 'transaction').title()
+            label = f"Main PDF - {transaction_type}"
             with st.expander(label, expanded=True):
-                render_form_fields(prefix, label)
+                render_form_fields(f"pdf_{idx}", label)
+
+        if st.session_state.share_transfer:
+            for idx, result in enumerate(st.session_state.get('recipient_results', [])):
+                transaction_type = result.get('transaction_type', 'transaction').title()
+                label = f"Recipient PDF - {transaction_type}"
+                
+                with st.expander(label, expanded=True):
+                    render_form_fields(f"recipient_{idx}", label)
+
 
 if __name__ == "__main__":
     main_ui()
