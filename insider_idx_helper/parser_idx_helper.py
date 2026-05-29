@@ -139,7 +139,7 @@ def extract_price_transaction(text: str) -> list[dict] | None:
 
         transaction_keywords = [
             "Penjualan", "Pembelian", "Lainnya",
-            "Koreksi", "Pelaksanaan", "(exercise)"
+            "Koreksi", "Pelaksanaan", "(exercise)", 'Hibah'
         ]
         footer_keywords = [
             "Pemberi", "Keterangan", "Jika",
