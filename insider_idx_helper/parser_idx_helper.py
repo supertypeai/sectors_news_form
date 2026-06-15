@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from insider_idx_helper.utils.helper import (
     classify_transaction_type, 
+    map_transaction_type,
     clean_number, 
     clean_percentage,
     standardize_date,
@@ -60,8 +61,6 @@ def extract_symbol_and_company_name(text: str) -> dict[str, str]:
             symbol = f'{symbol}.JK'
             company_name = company_name
 
-            # print(symbol, company_name)
-
             return symbol, company_name
         
         return None, None 
@@ -104,57 +103,59 @@ def extract_shares(text: str) -> dict[str, any]:
 def extract_price_transaction(text: str) -> list[dict] | None:
     try:
         lines = [line.strip() for line in text.split('\n') if line.strip()]
-
-        # HEADER DETECTION
+      
+        # Header Detection
         header_start_idx = None
         for index, line in enumerate(lines):
             if line == "Jenis" and index + 1 < len(lines) and lines[index + 1] == "Transaksi":
                 header_start_idx = index
                 break
-
+        
         if header_start_idx is None:
             return None
-
-        # FIND DATA START
+        
+        # Find Start of Data (After "Tujuan Transaksi")
         data_start_idx = None
         for index in range(header_start_idx, len(lines) - 1):
             if lines[index] == "Tujuan" and lines[index + 1] == "Transaksi":
                 data_start_idx = index + 2
                 break
-
+        
+        # Fallback for data start
         if data_start_idx is None:
-            transaction_keywords = ["Penjualan", "Pembelian", "Lainnya", "Koreksi", "Pelaksanaan", "(exercise)"]
-            for index in range(header_start_idx, len(lines)):
-                if lines[index] in transaction_keywords:
-                    if lines[index] == "Pelaksanaan" and index + 1 < len(lines) and lines[index + 1] in ["Jumlah", "Saham"]:
-                        continue
-                    data_start_idx = index
-                    break
+             transaction_keywords = ["Penjualan", "Pembelian", "Lainnya", "Koreksi", 'Pelaksanaan', '(exercise)']
+             for index in range(header_start_idx, len(lines)):
+                 if lines[index] in transaction_keywords:
+                     if lines[index] == "Pelaksanaan" and index + 1 < len(lines) and lines[index+1] in ["Jumlah", "Saham"]:
+                         continue 
+                     data_start_idx = index
+                     break
 
         if data_start_idx is None:
             return None
 
+        # Parse Transactions
         transactions = []
         index = data_start_idx
-
+        
         transaction_keywords = [
-            "Penjualan", "Pembelian", "Lainnya",
-            "Koreksi", "Pelaksanaan", "(exercise)", 'Hibah'
+            "Penjualan", "Pembelian", "Lainnya", 
+            "Koreksi", 'Pelaksanaan', '(exercise)', 'Hibah'
         ]
+
         footer_keywords = [
-            "Pemberi", "Keterangan", "Jika",
+            "Pemberi", "Keterangan", "Jika", 
             "Nama pemegang", "Informasi", "Saya bertanggung", "Hak Suara"
         ]
 
-        # NEW: carries day fragment stripped from previous tx's purpose on page split
-        pending_page_split_day = None
-
         while index < len(lines):
             line = lines[index]
-
-            if any(line.startswith(keyword) for keyword in footer_keywords):
+            
+            # If we hit a footer line, stop everything
+            if any(line.startswith(k) for k in footer_keywords):
                 break
-
+            
+            # Skip table headers
             if line == "Jenis" and index + 1 < len(lines) and lines[index + 1] == "Transaksi":
                 while index < len(lines):
                     if lines[index] == "Tujuan" and index + 1 < len(lines) and lines[index + 1] == "Transaksi":
@@ -162,225 +163,223 @@ def extract_price_transaction(text: str) -> list[dict] | None:
                         break
                     index += 1
                 continue
-
+            
             if line in transaction_keywords:
+                # A real transaction typically followed by "Tidak", "Ya", or "Langsung" 
+                # before hitting a footer
                 is_real_start = False
-                for lookahead in range(1, 10):
-                    if index + lookahead >= len(lines):
-                        break
-                    candidate = lines[index + lookahead]
-                    if candidate in ["Tidak", "Ya", "Langsung"]:
+                # Look ahead 10 lines
+                for i in range(1, 10): 
+                    if index + i >= len(lines): break
+                    val = lines[index + i]
+                    if val in ["Tidak", "Ya", "Langsung"]:
                         is_real_start = True
                         break
-                    if any(candidate.startswith(keyword) for keyword in footer_keywords):
-                        break
-
+                    if any(val.startswith(fk) for fk in footer_keywords):
+                        break 
+                
+                # If it's not a real start (e.g., it's just the word "Penjualan" in the purpose),
+                # skip this block and let the 'else' handle it or the previous purpose loop consume it
                 if not is_real_start:
                     index += 1
                     continue
 
-                # PARSE TRANSACTION TYPE
+                # Parse Transaction Type 
                 type_parts = [line]
                 index += 1
                 while index < len(lines):
                     curr = lines[index]
                     if curr in ["Tidak", "Ya"]:
                         break
-                    if curr == "Jenis" or any(curr.startswith(keyword) for keyword in footer_keywords):
+                    if curr == "Jenis" or any(curr.startswith(k) for k in footer_keywords): 
                         break
                     type_parts.append(curr)
                     index += 1
-
+                
                 transaction_type = ' '.join(type_parts)
-
-                if index < len(lines) and lines[index] in ["Tidak", "Ya"]:
-                    index += 1
-                if index < len(lines) and lines[index] == "Langsung":
+                
+                if index < len(lines) and lines[index] in ["Tidak", "Ya"]: 
                     index += 1
 
-                # FIND AMOUNT
+                if index < len(lines) and lines[index] == "Langsung": 
+                    index += 1
+
+                # Find Amount (Anchor to "Saham" with validation)
                 scan_limit = min(index + 100, len(lines))
                 saham_found = False
 
-                for scan_idx in range(index, scan_limit):
-                    if lines[scan_idx] == "Saham" and scan_idx > 0:
-                        prev_line = lines[scan_idx - 1]
-                        if ',' in prev_line and any(char.isdigit() for char in prev_line):
-                            index = scan_idx - 1
-                            saham_found = True
-                            break
+                for saham_idx in range(index, scan_limit):
+                    if lines[saham_idx] == "Saham":
+                        if saham_idx > 0:
+                            prev_line = lines[saham_idx - 1]
+                            
+                            if "," in prev_line and any(char.isdigit() for char in prev_line):
+                                index = saham_idx - 1
+                                saham_found = True
+                                break
 
-                # NEW: page-split recovery instead of silent skip
                 if not saham_found:
-                    if pending_page_split_day is None:
-                        index += 1
-                        continue
-
-                    amount = None
-                    for scan_idx in range(index, min(index + 20, len(lines))):
-                        candidate = lines[scan_idx]
-                        if ',' in candidate and any(char.isdigit() for char in candidate):
-                            amount = candidate
-                            index = scan_idx + 1
-                            break
-
-                    if amount is None:
-                        pending_page_split_day = None
-                        index += 1
-                        continue
-
-                    price = None
-                    for scan_idx in range(index, min(index + 10, len(lines))):
-                        candidate = lines[scan_idx]
-                        if ',' in candidate and any(char.isdigit() for char in candidate):
-                            price = candidate
-                            index = scan_idx + 1
-                            break
-
-                    # Collect month and year tokens
-                    # skipping page header and classification labels
-                    date_parts = [pending_page_split_day]
-                    purpose_parts = []
-
-                    while index < len(lines):
-                        curr = lines[index]
-
-                        if any(curr.startswith(keyword) for keyword in footer_keywords):
-                            break
-
-                        if curr == "Jenis" and index + 1 < len(lines) and lines[index + 1] == "Transaksi":
-                            while index < len(lines):
-                                if lines[index] == "Tujuan" and index + 1 < len(lines) and lines[index + 1] == "Transaksi":
-                                    index += 2
-                                    break
-                                index += 1
-                            continue
-
-                        if re.match(r'^(Jan|Feb|Mar|Apr|Mei|Jun|Jul|Ags|Sep|Okt|Nov|Des)', curr, re.IGNORECASE) and len(date_parts) < 3:
-                            date_parts.append(curr)
-                            index += 1
-                            continue
-
-                        if curr.isdigit() and len(curr) == 4 and len(date_parts) < 3:
-                            date_parts.append(curr)
-                            index += 1
-                            continue
-
-                        purpose_parts.append(curr)
-                        index += 1
-
-                    date = ' '.join(date_parts)
-                    purpose = ' '.join(purpose_parts) if purpose_parts else None
-                    pending_page_split_day = None
-
-                    transactions.append({
-                        "type": classify_transaction_type(transaction_type, purpose or ''),
-                        "amount_transacted": clean_number(amount),
-                        "price": clean_number(price),
-                        "date": standardize_date(date),
-                        "purpose": purpose
-                    })
+                    index += 1
                     continue
 
-                # NORMAL PATH
                 amount = lines[index] if index < len(lines) else None
                 index += 1
 
                 if index < len(lines) and lines[index] == "Saham":
                     index += 1
 
-                # FIND PRICE
-                price = None
-                for scan_idx in range(index, min(index + 10, len(lines))):
-                    curr = lines[scan_idx]
-                    if ',' in curr and any(char.isdigit() for char in curr):
-                        price = curr
-                        index = scan_idx + 1
+                # Collect Klasifikasi Saham
+                classification_parts = ["Saham"]
+                klasifikasi_scan_limit = min(index + 10, len(lines))
+
+                for klasifikasi_idx in range(index, klasifikasi_scan_limit):
+                    current_line = lines[klasifikasi_idx]
+
+                    if "," in current_line and any(char.isdigit() for char in current_line):
+                        index = klasifikasi_idx
                         break
 
-                if price is None:
+                    if any(current_line.startswith(footer_keyword) for footer_keyword in footer_keywords):
+                        index = klasifikasi_idx
+                        break
+
+                    if current_line in transaction_keywords:
+                        index = klasifikasi_idx
+                        break
+
+                    # A bare dash is the null placeholder for Harga, never part of Klasifikasi Saham
+                    if current_line == "-":
+                        index = klasifikasi_idx
+                        break
+
+                    classification_parts.append(current_line)
+                else:
+                    index = klasifikasi_scan_limit
+
+                classification_saham = " ".join(classification_parts)
+
+                # Find Price
+                scan_limit_price = min(index + 10, len(lines))
+                price = None
+                price_found = False
+
+                for price_idx in range(index, scan_limit_price):
+                    candidate = lines[price_idx]
+
+                    if candidate == "-":
+                        price = None
+                        price_found = True
+                        index = price_idx + 1
+                        break
+
+                    if "," in candidate and any(char.isdigit() for char in candidate):
+                        price = candidate
+                        price_found = True
+                        index = price_idx + 1
+                        break
+
+                if not price_found:
                     price = lines[index] if index < len(lines) else None
                     index += 1
-
-                # FIND DATE
+                
+                # Find Date
                 date_parts = []
                 while index < len(lines):
                     part = lines[index]
+                    # Check if this line starts a date
                     if re.match(r'^\d{1,2}[\s-]', part):
                         date_parts.append(part)
                         index += 1
+
+                        # Collect remaining date parts
                         while index < len(lines):
                             part = lines[index]
                             date_parts.append(part)
                             index += 1
-                            if part.isdigit() and len(part) == 4:
+                            
+                            if part.isdigit() and len(part) == 4: 
                                 break
-                            if len(date_parts) >= 5:
+                            if len(date_parts) >= 5: 
                                 break
                         break
+
                     index += 1
+                    if len(date_parts) > 0 or index >= min(len(lines), index + 10):
+                        break
 
                 date = ' '.join(date_parts) if date_parts else None
-
-                # FIND PURPOSE + detect page-split artifact
+                
+                # Find Purpose (always exactly one line after date)
                 purpose_parts = []
                 while index < len(lines):
                     curr = lines[index]
-
-                    if any(curr.startswith(keyword) for keyword in footer_keywords):
+                    
+                    # Stop if footer
+                    if any(curr.startswith(k) for k in footer_keywords): 
                         break
+                    
+                    # Stop if table header
                     if curr == "Jenis" and index + 1 < len(lines) and lines[index + 1] == "Transaksi":
                         break
 
+                    # Check if NEXT line is start of new transaction (look ahead)
                     if index + 1 < len(lines) and lines[index + 1] in transaction_keywords:
+                        # Verify next line is real transaction start
                         is_next_real_start = False
-                        for lookahead in range(2, 12):
-                            if index + lookahead >= len(lines):
-                                break
-                            candidate = lines[index + lookahead]
-                            if candidate in ["Tidak", "Ya", "Langsung"]:
+                        for i in range(2, 12):  # Look from index+2 onwards
+                            if index + i >= len(lines): break
+                            val = lines[index + i]
+                            if val in ["Tidak", "Ya", "Langsung"]:
                                 is_next_real_start = True
                                 break
-                            if any(candidate.startswith(keyword) for keyword in footer_keywords):
+                            if any(val.startswith(fk) for fk in footer_keywords):
                                 break
-
+                        
                         if is_next_real_start:
+                            # Next line starts new transaction, current line is last part of purpose
                             purpose_parts.append(curr)
                             index += 1
                             break
-
+                    
+                    # Current line is part of purpose
                     purpose_parts.append(curr)
                     index += 1
 
-                raw_purpose = ' '.join(purpose_parts)
+                purpose = ' '.join(purpose_parts)
 
-                # NEW: detect "INVESTASI Saham 29-" artifact and carry day forward
-                artifact_match = re.search(r'\s+Saham\s+(\d{1,2}-)\s*$', raw_purpose)
-                if artifact_match:
-                    pending_page_split_day = artifact_match.group(1)
-                    purpose = raw_purpose[:artifact_match.start()].strip()
-                else:
-                    pending_page_split_day = None
-                    purpose = raw_purpose
+                LOGGER.info(
+                    f"DEBUG: transaction_type='{transaction_type}', amount={amount}, price={price}, date={date}"
+                )
 
-                transactions.append({
-                    "type": classify_transaction_type(transaction_type, purpose),
-                    "amount_transacted": clean_number(amount),
-                    "price": clean_number(price),
-                    "date": standardize_date(date),
-                    "purpose": purpose
-                })
+                # Build Object
+                # print(f'raw tx type: {transaction_type} | purpose: {purpose}')
+
+                type_mapped = map_transaction_type(transaction_type)
+                amount_clean = clean_number(amount) 
+                price_clean = clean_number(price) 
+                date_clean = standardize_date(date) 
+
+                transaction = {
+                    "type": type_mapped,
+                    "amount_transacted": amount_clean,
+                    "price": price_clean,
+                    "date": date_clean,
+                    "purpose": purpose,
+                    "classification": classification_saham
+                }
+
+                transactions.append(transaction)
 
             else:
                 index += 1
-
+      
         if not transactions:
             return None
 
-        return transactions
-
+        return transactions 
+    
     except Exception as error:
-        LOGGER.error(f'extract price transaction error: {error}')
+        LOGGER.error(f'extract price transaction error: {error}', exc_info=True)
         return None
     
 
