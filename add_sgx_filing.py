@@ -18,6 +18,55 @@ CREATE_CLIENT_SUPABASE = create_client(
 )
 
 
+
+KEYWORD_DIRECTOR_FEE = [
+    "director's fee", "directors' fee", "director\u2019s fee", "directors\u2019 fee",
+    "non-executive director", "in lieu of cash", "share component of my",
+    "directors' remuneration", "directors\u2019 remuneration",
+]
+KEYWORD_EMPLOYEE_PLAN = [
+    "restricted unit plan", "performance unit plan", "restricted share plan",
+    "restricted stapled security plan", "performance stapled security plan",
+    "long-term incentive plan", "executive share scheme", "restricted share award",
+    "vesting of awards", "key management personnel", "eligible employees",
+    "share grant",
+]
+KEYWORD_MANAGEMENT_FEE = [
+    "management fee", "base management fee", "performance management fee",
+    "divestment fee", "acquisition fee",
+]
+KEYWORD_DIVIDEND = [
+    "dividend in specie", "special dividend",
+]
+KEYWORD_INHERITANCE = [
+    "deceased", "beneficiaries",
+]
+KEYWORD_INTERNAL_RESTRUCTURING = [
+    "internal transfer", "wholly-owned subsidiaries", "amalgamated",
+    "amalgamation", "by operation of law", "immediate holding company",
+]
+KEYWORD_GIFT = [
+    "by way of gift", "as a gift",
+]
+
+# Checkbox keys that all map to the employee-share-plan tag.
+EMPLOYEE_CHECKBOX_KEYS = [
+    "Acceptance of employee share options/share awards",
+    "Vesting of share awards",
+    "Exercise of employee share options",
+]
+# The take-over key varies between forms; only one appears per filing.
+TAKEOVER_CHECKBOX_KEYS = [
+    "Acceptance of take-over offer",
+    "Acceptance of take-over offer for Listed Issuer",
+]
+
+
+def contains_any_keyword(text: str, keywords: list) -> bool:
+    lowered = text.lower()
+    return any(keyword in lowered for keyword in keywords)
+
+
 def push_data(payload: list[dict[str, any]], table_name: str):
     try:
         response = (
@@ -59,6 +108,78 @@ def run_generate_title_and_body(records: list[dict]) ->list[dict]:
         record['body'] = body 
     
     return records 
+
+
+def detect_tags(records: list[dict]) -> list:
+    for record in records: 
+        final_tags = [] 
+
+        circumstances_raw = record.get('circumstances_raw')
+
+        results = circumstances_raw.get('results') or {}
+        acquisition = results.get('acquisition') or {}
+        disposal = results.get('disposal') or {}
+        other_circumstances = results.get('other_circumstances') or {}
+        others_specify = results.get('others_specify') or {}
+
+        acquisition_ticked = any(value is True for value in acquisition.values())
+        disposal_ticked = any(value is True for value in disposal.values())
+
+        if acquisition_ticked:
+            final_tags.append('investment')
+
+        elif disposal_ticked:
+            final_tags.append('divestment')
+        
+
+        # checkbox tier 
+        takeover_ticked = any(
+            other_circumstances.get(key) is True for key in TAKEOVER_CHECKBOX_KEYS
+        )
+
+        if takeover_ticked:
+            final_tags.append('takeover')
+
+        corporate_action = other_circumstances.get('Corporate action by Listed Issuer') or {}
+
+        if corporate_action.get('checked') is True:
+            final_tags.append('corporate-action')
+
+        employee_checkbox_ticked = any(
+            other_circumstances.get(key) is True for key in EMPLOYEE_CHECKBOX_KEYS
+        )
+
+        # Cause: Others free text 
+        others_text = ""
+
+        if others_specify.get('checked') is True:
+            others_text = others_specify.get('description') or ""
+
+        employee_text_match = contains_any_keyword(others_text, KEYWORD_EMPLOYEE_PLAN)
+
+        if contains_any_keyword(others_text, KEYWORD_DIRECTOR_FEE):
+            final_tags.append('director-fee-shares')
+        
+        if employee_checkbox_ticked or employee_text_match:
+            if 'director-fee-shares' not in final_tags:
+                final_tags.append('employee-share-plan')
+        
+        if contains_any_keyword(others_text, KEYWORD_MANAGEMENT_FEE):
+            final_tags.append('management-fee-shares')
+        
+        if contains_any_keyword(others_text, KEYWORD_DIVIDEND):
+            final_tags.append('dividend-in-specie')
+        
+        if contains_any_keyword(others_text, KEYWORD_INHERITANCE):
+            final_tags.append('inheritance')
+        
+        if contains_any_keyword(others_text, KEYWORD_INTERNAL_RESTRUCTURING):
+            final_tags.append('internal-restructuring')
+        
+        if contains_any_keyword(others_text, KEYWORD_GIFT):
+            final_tags.append('gift')
+
+        record['tags'] = final_tags
 
 
 def main_ui():
@@ -108,15 +229,25 @@ def main_ui():
                 payload_news = response.json()['data']
 
                 payload = run_generate_title_and_body(data)
+                detect_tags(payload)
 
-                payload_filing = [
-                    {
-                        key: value for key, value in record.items()
-                        if key not in {'reasons', 'issuer_name', 'circumstances_desc'}
+                payload_filing = []
+
+                for record in payload:
+                    filing_record = {
+                        key: value
+                        for key, value in record.items()
+                        if key not in {
+                            'reasons',
+                            'issuer_name',
+                            'circumstances_desc',
+                            'circumstances_raw'
+                        }
                     }
-                    for record in payload
-                ]
 
+                    filing_record['source_is_manual'] = True
+                    payload_filing.append(filing_record)
+                
                 if not isinstance(payload_filing, list):
                     st.error("❌ JSON must contain an array of objects")
                     return
