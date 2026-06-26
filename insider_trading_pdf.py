@@ -233,7 +233,7 @@ def post_form(prefix: str, form_label: str):
             st.session_state.pair_filing_uid = str(uuid.uuid4())
 
         data['UID'] = st.session_state.pair_filing_uid
-        data['tags'] = 'share_transfer'
+        data['tags'] = 'share-transfer'
         
         # Determine if this is recipient
         if prefix.startswith('recipient'):
